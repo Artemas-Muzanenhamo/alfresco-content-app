@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -25,38 +25,178 @@
 
 import { Effect, Actions, ofType } from '@ngrx/effects';
 import { Injectable } from '@angular/core';
-import { map } from 'rxjs/operators';
-import { ViewNodeAction, VIEW_NODE } from '../actions/viewer.actions';
-import { Router } from '@angular/router';
+import { map, take } from 'rxjs/operators';
+import {
+  AppStore,
+  ViewerActionTypes,
+  ViewFileAction,
+  ViewNodeAction,
+  getCurrentFolder,
+  getAppSelection,
+  FullscreenViewerAction
+} from '@alfresco/aca-shared/store';
+import {
+  Router,
+  UrlTree,
+  UrlSegmentGroup,
+  PRIMARY_OUTLET,
+  UrlSegment
+} from '@angular/router';
+import { Store, createSelector } from '@ngrx/store';
+import { AppExtensionService } from '../../extensions/extension.service';
+
+export const fileToPreview = createSelector(
+  getAppSelection,
+  getCurrentFolder,
+  (selection, folder) => {
+    return {
+      selection,
+      folder
+    };
+  }
+);
 
 @Injectable()
 export class ViewerEffects {
-    constructor(private actions$: Actions, private router: Router) {}
+  constructor(
+    private store: Store<AppStore>,
+    private actions$: Actions,
+    private router: Router,
+    private extensions: AppExtensionService
+  ) {}
 
-    @Effect({ dispatch: false })
-    viewNode$ = this.actions$.pipe(
-        ofType<ViewNodeAction>(VIEW_NODE),
-        map(action => {
-            const node = action.payload;
-            if (!node) {
-                return;
-            }
+  @Effect({ dispatch: false })
+  fullscreenViewer$ = this.actions$.pipe(
+    ofType<FullscreenViewerAction>(ViewerActionTypes.FullScreen),
+    map(() => {
+      this.enterFullScreen();
+    })
+  );
 
-            let previewLocation = this.router.url;
-            if (previewLocation.lastIndexOf('/') > 0) {
-                previewLocation = previewLocation.substr(
-                    0,
-                    this.router.url.indexOf('/', 1)
-                );
-            }
-            previewLocation = previewLocation.replace(/\//g, '');
+  @Effect({ dispatch: false })
+  viewNode$ = this.actions$.pipe(
+    ofType<ViewNodeAction>(ViewerActionTypes.ViewNode),
+    map(action => {
+      if (action.viewNodeExtras) {
+        const { location, path } = action.viewNodeExtras;
 
-            const path = [previewLocation];
-            if (node.parentId) {
-                path.push(node.parentId);
+        if (location) {
+          const navigation = this.getNavigationCommands(location);
+
+          this.router.navigate(
+            [...navigation, { outlets: { viewer: ['view', action.nodeId] } }],
+            {
+              queryParams: { location }
             }
-            path.push('preview', node.id);
-            this.router.navigateByUrl(path.join('/'));
-        })
+          );
+        }
+
+        if (path) {
+          this.router.navigate(
+            ['view', { outlets: { viewer: [action.nodeId] } }],
+            {
+              queryParams: { path }
+            }
+          );
+        }
+      } else {
+        this.router.navigate([
+          'view',
+          { outlets: { viewer: [action.nodeId] } }
+        ]);
+      }
+    })
+  );
+
+  @Effect({ dispatch: false })
+  viewFile$ = this.actions$.pipe(
+    ofType<ViewFileAction>(ViewerActionTypes.ViewFile),
+    map(action => {
+      if (action.payload && action.payload.entry) {
+        const { id, nodeId, isFile } = <any>action.payload.entry;
+
+        if (
+          this.extensions.canPreviewNode(action.payload) &&
+          (isFile || nodeId)
+        ) {
+          this.displayPreview(nodeId || id, action.parentId);
+        }
+      } else {
+        this.store
+          .select(fileToPreview)
+          .pipe(take(1))
+          .subscribe(result => {
+            if (result.selection && result.selection.file) {
+              const { id, nodeId, isFile } = <any>result.selection.file.entry;
+
+              if (
+                this.extensions.canPreviewNode(action.payload) &&
+                (isFile || nodeId)
+              ) {
+                const parentId = result.folder ? result.folder.id : null;
+                this.displayPreview(nodeId || id, parentId);
+              }
+            }
+          });
+      }
+    })
+  );
+
+  private displayPreview(nodeId: string, parentId: string) {
+    if (!nodeId) {
+      return;
+    }
+
+    let previewLocation = this.router.url;
+    if (previewLocation.lastIndexOf('/') > 0) {
+      previewLocation = previewLocation.substr(
+        0,
+        this.router.url.indexOf('/', 1)
+      );
+    }
+    previewLocation = previewLocation.replace(/\//g, '');
+
+    const path = [previewLocation];
+    if (parentId) {
+      path.push(parentId);
+    }
+    path.push('preview', nodeId);
+    this.router.navigateByUrl(path.join('/'));
+  }
+
+  enterFullScreen() {
+    const container = <any>(
+      document.documentElement.querySelector(
+        '.adf-viewer__fullscreen-container'
+      )
     );
+    if (container) {
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+      } else if (container.webkitRequestFullscreen) {
+        container.webkitRequestFullscreen();
+      } else if (container.mozRequestFullScreen) {
+        container.mozRequestFullScreen();
+      } else if (container.msRequestFullscreen) {
+        container.msRequestFullscreen();
+      }
+    }
+  }
+
+  private getNavigationCommands(url: string): any[] {
+    const urlTree: UrlTree = this.router.parseUrl(url);
+    const urlSegmentGroup: UrlSegmentGroup =
+      urlTree.root.children[PRIMARY_OUTLET];
+
+    if (!urlSegmentGroup) {
+      return [url];
+    }
+
+    const urlSegments: UrlSegment[] = urlSegmentGroup.segments;
+
+    return urlSegments.reduce(function(acc, item) {
+      acc.push(item.path, item.parameters);
+      return acc;
+    }, []);
+  }
 }

@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,49 +23,123 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Effect, Actions, ofType } from '@ngrx/effects';
-import { Injectable } from '@angular/core';
-import { map } from 'rxjs/operators';
-import { DeleteLibraryAction, DELETE_LIBRARY } from '../actions';
 import {
-    SnackbarInfoAction,
-    SnackbarErrorAction
-} from '../actions/snackbar.actions';
+  AppStore,
+  CreateLibraryAction,
+  DeleteLibraryAction,
+  LeaveLibraryAction,
+  LibraryActionTypes,
+  NavigateLibraryAction,
+  NavigateRouteAction,
+  SnackbarErrorAction,
+  UpdateLibraryAction,
+  getAppSelection
+} from '@alfresco/aca-shared/store';
+import { Injectable } from '@angular/core';
+import { Actions, Effect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { AppStore } from '../states/app.state';
-import { ContentManagementService } from '../../common/services/content-management.service';
-import { ContentApiService } from '../../services/content-api.service';
+import { map, mergeMap, take } from 'rxjs/operators';
+import { ContentApiService } from '@alfresco/aca-shared';
+import { ContentManagementService } from '../../services/content-management.service';
 
 @Injectable()
-export class SiteEffects {
-    constructor(
-        private actions$: Actions,
-        private store: Store<AppStore>,
-        private contentApi: ContentApiService,
-        private content: ContentManagementService
-    ) {}
+export class LibraryEffects {
+  constructor(
+    private store: Store<AppStore>,
+    private actions$: Actions,
+    private content: ContentManagementService,
+    private contentApi: ContentApiService
+  ) {}
 
-    @Effect({ dispatch: false })
-    deleteLibrary$ = this.actions$.pipe(
-        ofType<DeleteLibraryAction>(DELETE_LIBRARY),
-        map(action => {
-            this.contentApi.deleteSite(action.payload).subscribe(
-                () => {
-                    this.content.siteDeleted.next(action.payload);
-                    this.store.dispatch(
-                        new SnackbarInfoAction(
-                            'APP.MESSAGES.INFO.LIBRARY_DELETED'
-                        )
-                    );
-                },
-                () => {
-                    this.store.dispatch(
-                        new SnackbarErrorAction(
-                            'APP.MESSAGES.ERRORS.DELETE_LIBRARY_FAILED'
-                        )
-                    );
-                }
-            );
-        })
-    );
+  @Effect({ dispatch: false })
+  deleteLibrary$ = this.actions$.pipe(
+    ofType<DeleteLibraryAction>(LibraryActionTypes.Delete),
+    map(action => {
+      if (action.payload) {
+        this.content.deleteLibrary(action.payload);
+      } else {
+        this.store
+          .select(getAppSelection)
+          .pipe(take(1))
+          .subscribe(selection => {
+            if (selection && selection.library) {
+              this.content.deleteLibrary(selection.library.entry.id);
+            }
+          });
+      }
+    })
+  );
+
+  @Effect({ dispatch: false })
+  leaveLibrary$ = this.actions$.pipe(
+    ofType<LeaveLibraryAction>(LibraryActionTypes.Leave),
+    map(action => {
+      if (action.payload) {
+        this.content.leaveLibrary(action.payload);
+      } else {
+        this.store
+          .select(getAppSelection)
+          .pipe(take(1))
+          .subscribe(selection => {
+            if (selection && selection.library) {
+              this.content.leaveLibrary(selection.library.entry.id);
+            }
+          });
+      }
+    })
+  );
+
+  @Effect()
+  createLibrary$ = this.actions$.pipe(
+    ofType<CreateLibraryAction>(LibraryActionTypes.Create),
+    mergeMap(() => this.content.createLibrary()),
+    map(libraryId => new NavigateLibraryAction(libraryId))
+  );
+
+  @Effect({ dispatch: false })
+  navigateLibrary$ = this.actions$.pipe(
+    ofType<NavigateLibraryAction>(LibraryActionTypes.Navigate),
+    map(action => {
+      const libraryId = action.payload;
+      if (libraryId) {
+        this.contentApi
+          .getNode(libraryId, { relativePath: '/documentLibrary' })
+          .pipe(map(node => node.entry.id))
+          .subscribe(
+            id => {
+              this.store.dispatch(new NavigateRouteAction(['libraries', id]));
+            },
+            () => {
+              this.store.dispatch(
+                new SnackbarErrorAction('APP.MESSAGES.ERRORS.MISSING_CONTENT')
+              );
+            }
+          );
+      }
+    })
+  );
+
+  @Effect({ dispatch: false })
+  updateLibrary$ = this.actions$.pipe(
+    ofType<UpdateLibraryAction>(LibraryActionTypes.Update),
+    map(action => {
+      this.store
+        .select(getAppSelection)
+        .pipe(take(1))
+        .subscribe(selection => {
+          if (selection && selection.library) {
+            const { id } = selection.library.entry;
+            const { title, description, visibility } = action.payload;
+
+            const siteBody = {
+              title,
+              description,
+              visibility
+            };
+
+            this.content.updateLibrary(id, siteBody);
+          }
+        });
+    })
+  );
 }

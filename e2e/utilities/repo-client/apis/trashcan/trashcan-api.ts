@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -25,52 +25,75 @@
 
 import { RepoApi } from '../repo-api';
 import { Utils } from '../../../../utilities/utils';
+import { TrashcanApi as AdfTrashcanApi} from '@alfresco/js-api';
 
 export class TrashcanApi extends RepoApi {
-    permanentlyDelete(id: string): Promise<any> {
-        return this
-            .delete(`/deleted-nodes/${id}`)
-            .catch(this.handleError);
-    }
+  trashcanApi = new AdfTrashcanApi(this.alfrescoJsApi);
 
-    restore(id: string) {
-        return this
-            .post(`/deleted-nodes/${id}/restore`)
-            .catch(this.handleError);
-    }
+  constructor(username?, password?) {
+    super(username, password);
+  }
 
-    getDeletedNodes(): Promise<any> {
-        return this
-            .get(`/deleted-nodes?maxItems=1000`)
-            .catch(this.handleError);
+  async permanentlyDelete(id: string) {
+    try {
+      await this.apiAuth();
+      return await this.trashcanApi.deleteDeletedNode(id);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.permanentlyDelete.name}`, error);
     }
+  }
 
-    emptyTrash(): Promise<any> {
-        return this.getDeletedNodes()
-            .then(resp => {
-                return resp.data.list.entries.map(entries => entries.entry.id);
-            })
-            .then(ids => {
-                return ids.reduce((previous, current) => (
-                    previous.then(() => this.permanentlyDelete(current))
-                ), Promise.resolve());
-            })
-            .catch(this.handleError);
+  async restore(id: string) {
+    try {
+      await this.apiAuth();
+      return await this.trashcanApi.restoreDeletedNode(id);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.restore.name}`, error);
+      return null;
     }
+  }
 
-    waitForApi(data) {
-        const deletedFiles = () => {
-            return this.getDeletedNodes()
-                .then(response => response.data.list.pagination.totalItems)
-                .then(totalItems => {
-                    if ( totalItems < data.expect) {
-                        return Promise.reject(totalItems);
-                    } else {
-                        return Promise.resolve(totalItems);
-                    }
-                });
-        };
-
-        return Utils.retryCall(deletedFiles);
+  async getDeletedNodes() {
+    const opts = {
+        maxItems: 1000
+    };
+    try {
+      await this.apiAuth();
+      return await this.trashcanApi.listDeletedNodes(opts);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.getDeletedNodes.name}`, error);
+      return null;
     }
+  }
+
+  async emptyTrash() {
+    try {
+      const ids = (await this.getDeletedNodes()).list.entries.map(entries => entries.entry.id);
+
+      return await ids.reduce(async (previous, current) => {
+          await previous;
+          return await this.permanentlyDelete(current);
+      }, Promise.resolve());
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.emptyTrash.name}`, error);
+    }
+  }
+
+  async waitForApi(data: { expect: number }) {
+    try {
+      const deletedFiles = async () => {
+        const totalItems = (await this.getDeletedNodes()).list.pagination.totalItems;
+        if ( totalItems !== data.expect) {
+            return Promise.reject(totalItems);
+        } else {
+            return Promise.resolve(totalItems);
+        }
+      };
+
+      return await Utils.retryCall(deletedFiles);
+    } catch (error) {
+      console.log(`${this.constructor.name} ${this.waitForApi.name} catch: `);
+      console.log(`\tExpected: ${data.expect} items, but found ${error}`);
+    }
+  }
 }

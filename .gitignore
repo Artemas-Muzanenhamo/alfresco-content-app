@@ -4,7 +4,6 @@
 /dist
 /tmp
 /out-tsc
-/src/versions.json
 
 # dependencies
 /node_modules
@@ -24,6 +23,7 @@
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+!.vscode/*.code-snippets
 .history
 
 # misc

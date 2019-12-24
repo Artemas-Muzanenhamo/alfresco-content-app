@@ -1,94 +1,107 @@
-   <p align="left"> <img title="Alfresco" src="alfresco.png" alt="Alfresco - make business flow"></p>
-   
-# Alfresco Example Content Application
+<p align="left"> <img title="Alfresco" src="alfresco.png" alt="Alfresco - Simply a better way to create amazing digital experiences"></p>
+
+# Alfresco Content Application
+
+Testing Supported By<br/>
+<img width="160" src="docs/images/Browserstack-logo.svg" alt="BrowserStack"/>
 
 ## Introduction
 
-The Alfresco Content Application is an example application built using
-[Alfresco Application Development Framework (ADF)](https://github.com/Alfresco/alfresco-ng2-components) components and was generated with [Angular CLI](https://github.com/angular/angular-cli).
+The Alfresco Content Application a content management application built using
+[Alfresco Application Development Framework (ADF)](https://github.com/Alfresco/alfresco-ng2-components) components
+and was generated with [Angular CLI](https://github.com/angular/angular-cli).
 
-### Who is this example application for
+### Who is this application for
 
-This project demonstrates how to construct an application for Alfresco Content Services using the Alfresco ADF and it represents a meaningful composition of ADF components that provide end users with a simple easy to use interface for working with files in the content repository.
+The Content Application is a streamlined experience for end users on top of Alfresco Content Services, focused on file management within the Alfresco content repository. It provides developers with an easily extendable environment for lightning fast custom application development by providing safe ways to inject custom controls, viewer components, pages and plug-ins without upgrade concerns.
 
 ### Where to get help
-There are a number of resources available to help get you started with the Content App and the ADF:
-* [Content App Documentation](https://alfresco.github.io/alfresco-content-app/)
-* [Alfresco ADF Documentation](https://alfresco.github.io/adf-component-catalog/)
-* [Alfresco Community](https://community.alfresco.com/)
-* [ADF Gitter Channel](https://gitter.im/Alfresco/alfresco-ng2-components)
 
-To get help on Angular CLI use ng help or read the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+There are a number of resources available to help get you started with the Content App and the ADF:
+
+- [Gitter Chat](https://gitter.im/Alfresco/content-app) - Developer community chat
+- [Content App Documentation](https://alfresco-content-app.netlify.com/) - Developer documentation
+- [Alfresco ADF Documentation](https://www.alfresco.com/abn/adf/) - Application Development Framework documentation
+- [Alfresco Community Portal](https://community.alfresco.com/) - Developer Community Forums
+- [Alfresco Customer Support](https://support.alfresco.com/) - Customer support for the Alfresco Digital Workspace
 
 ### Raising issues and feature requests
-Isuses can be raised in GitHub or in the Alfresco JIRA project. 
-Please include a clear description, steps to reproduce and screenshots where appropriate.All issues will be reviewed; bugs will be categorized if reproducible and enhancement/feature suggestions will be considered against existing priorities if the use case serves a general-purpose need.
 
-#### High level features planned for Q3 2018 (July - September)
-* Library Management - create, find, join and manage file libraries.
-* Commenting - View and add comments to files and folders
-* Sharing Files - activate and deactivate shared file both manually and automatically.
-* Permissions - update file and folder permissions.
-* Application Extensibility	- Extension framework to provide simple ways to extend the application.
+Issues can be raised in [GitHub] or in the Alfresco JIRA project.
+Please include a clear description, steps to reproduce and screenshots where appropriate. All issues will be reviewed; bugs will be categorized if reproducible and enhancement/feature suggestions will be considered against existing priorities if the use case serves a general-purpose need.
 
-### Want to help?
-Want to file a bug, contribute some code, or improve documentation? Excellent! Read up on our guidelines for [contributing](https://github.com/Alfresco/alfresco-content-app/blob/master/CONTRIBUTING.md) and then check out one of our issues in the [Jira](https://issues.alfresco.com/jira/projects/ACA) or [GitHub](https://github.com/Alfresco/alfresco-content-app/issues)
+#### What's new in the latest release
+
+- Single Log Out
+- WCAG AA accessibility improvements
+
+Please refer to the [release notes] for details of all changes.
+
+#### High level feature themes under consideration for future releases
+
+- Extensibility
+  - Building on the existing framework to further enhance the developer experience
+- Collaboration & File Management
+  - Folder rule creation
+  - File/Folder linking via secondary association
+- File Library Management
+- Enhanced UI and user experience
+  - Accessibility WCAG AA compliance
+  - Search query input assistance
+  - Metadata information drawer enhancements
+
+### Want to help
+
+Want to file a bug, contribute some code, or improve documentation? Excellent!
+Read up on our guidelines for [contributing] and then check out one of our issues in the [Jira] or [GitHub].
+
+## Compatibility
+
+| ACA Version | Built with | Tested on |
+| ----------- | ---------- | --------- |
+| ACA 1.9     | ADF 3.6.0  | ACS 6.2   |
+| ACA 1.8     | ADF 3.3.0  | ACS 6.1   |
+| ACA 1.7     | ADF 3.0.0  | ACS 6.1   |
+| ACA 1.6     | ADF 2.6.1  | ACS 6.1   |
+| ACA 1.5     | ADF 2.6.0  | ACS 6.0   |
+| ACA 1.4     | ADF 2.5.0  | ACS 6.0   |
+| ACA 1.3     | ADF 2.4.0  | ACS 6.0   |
+| ACA 1.2     | ADF 2.3.0  | ACS 5.2   |
+| ACA 1.1     | ADF 2.2.0  | ACS 5.2   |
+| ACA 1.0     | ADF 2.0.0  | ACS 5.2   |
 
 ## Available Features
-| Feature          | Description                                                    | 
-|------------------|----------------------------------------------------------------|
-| Document List    | Folder/File browsing of Personal Files, and File Libraries     |
-| Shared Files	   | Lists all files that have shared.                              |
-| Recent Files	   | List files created and/or modified by the logged users within the last 30 days|
-| Favorites	       | Lists all favorited files for the user. |
-| Trash	           | Lists all deleted items stored in the trash can, users can restore or permanently remove. Admin user will see items deleted by all users.|
-| Upload	       | Files and folders can be uploaded through the New button or by dragging and dropping into the browser.|
-| Search	       | Quick search with live results, and full faceted search results page.| 
-| Actions	       | A number of actions can be performed on files and/or folders, either individually or multiples at a time|
-| Viewer           | Viewing files in natively in the browser, unsupported formats are transformed by the repository |                  
-| Metadata	       | The information drawer can be configured in the app.config.json to display metadata information, by default file the Properties Aspect is shown and images will also include EXIF information.|
-| Versioning	   | The version manager provides access and management of previous file versions, and the ability to upload new versions.|
 
-
-## Development server
-
-Run `npm start` for a dev server. Navigate to `http://localhost:4200/` (opens by default).
-The app will automatically reload if you change any of the source files.
-
-## Build
-
-Run `npm run build` to build the project in the production mode. The build artifacts will be stored in the `dist/` directory.
-
-## Running unit tests
-
-Run `npm test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run the local instance of the application packaged into the docker image together with the ACS images:
-
-```sh
-npm run build
-npm run start:docker
-```
-
-The ACA runs on port 4000 inside the docker container.
-Run `npm run e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
-
-```sh
-npm run e2e
-```
-
-When testing is over you can stop all corresponding containers:
-
-```sh
-npm run stop:docker
-```
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+| Version | Feature                    | Description                                                                                                                                                                                    |
+| ------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.5     | My Files                   | Folder/File browsing of Personal Files.                                                                                                                                                        |
+| 1.5     | File Libraries             | Create, find, join and browse the file libraries of sites created in the repository.                                                                                                           |
+| 1.5     | Shared Files               | Lists all files that have shared.                                                                                                                                                              |
+| 1.5     | Recent Files               | List files created and/or modified by the logged users within the last 30 days.                                                                                                                |
+| 1.5     | Favorites                  | Lists all favorite files for the user.                                                                                                                                                         |
+| 1.5     | Trash                      | Lists all deleted items stored in the trash can, users can restore or permanently remove. Admin user will see items deleted by all users.                                                      |
+| 1.5     | Upload                     | Files and folders can be uploaded through the New button or by dragging and dropping into the browser.                                                                                         |
+| 1.5     | Search                     | Quick search with live results, and full faceted search results page.                                                                                                                          |
+| 1.5     | Actions                    | A number of actions can be performed on files and/or folders, either individually or multiples at a time.                                                                                      |
+| 1.5     | Viewer                     | Viewing files in natively in the browser, unsupported formats are transformed by the repository.                                                                                               |
+| 1.5     | Metadata                   | The information drawer can be configured in the app.config.json to display metadata information, by default file the Properties Aspect is shown and images will also include EXIF information. |
+| 1.5     | File Sharing               | Share files, with time expiry if required, externally with uniquely generated URLs.                                                                                                            |
+| 1.5     | Versioning                 | The version manager provides access and management of previous file versions, and the ability to upload new versions.                                                                          |
+| 1.5     | Permissions                | Granular user permission management of the folders and files throughout the repository.                                                                                                        |
+| 1.5     | Extensibility              | The application provides safe extension points allowing full customisation; see [Documentation](https://alfresco-content-app.netlify.com/#/extending/) for details.                            |
+| 1.6     | Library management         | Join and favorite libraries. New search input to find Libraries, files and/or folders.                                                                                                         |
+| 1.7     | Edit Offline               | Lock and unlock for editing, download current version, upload new version.                                                                                                                     |
+| 1.7     | Edit with Microsoft Office | Extension to edit online with Alfresco Office Services (AOS)                                                                                                                                   |
+| 1.7     | Single Sign-On (SSO)       | Support for Alfresco Identity Service, with ADF 3.0.0    |        
+| 1.7     | Search Query Language      | Enhanced search input using the Alfresco Search Query Language    | 
+| 1.8     | Localizations .            | Arabic, Czech, Danish, Finnish, Polish and Swedish |
+| 1.8     | Metadata improvements      | Automatic display of aspects and properties |
+| 1.8     | Search facet improvements  | Facet intervals and grouped facet queries |
+| 1.8     | Extensibility improvements | Various - see [release notes](https://github.com/Alfresco/alfresco-content-app/releases) for details |
+| 1.9     | Single Log Out | Users will be automatically logged out from the Content App after logging out from another application in the same browser session | 
+| 1.9     | Accessibility improvements | Various - see [release notes](https://github.com/Alfresco/alfresco-content-app/releases) for details | 
 
 [contributing]: https://github.com/Alfresco/alfresco-content-app/blob/master/CONTRIBUTING.md
 [github]: https://github.com/Alfresco/alfresco-content-app/issues
 [jira]: https://issues.alfresco.com/jira/projects/ACA
+[release notes]: https://github.com/Alfresco/alfresco-content-app/releases

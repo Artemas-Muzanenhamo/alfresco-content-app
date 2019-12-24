@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,48 +23,63 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { PersonModel, Person } from './people-api-models';
 import { RepoApi } from '../repo-api';
-import { Person } from './people-api-models';
+import { PeopleApi as AdfPeopleApi} from '@alfresco/js-api';
 
 export class PeopleApi extends RepoApi {
-    getUser(username: string) {
-        return this
-            .get(`/people/${username}`)
-            .catch(this.handleError);
+  peopleApi = new AdfPeopleApi(this.alfrescoJsApi);
+
+  constructor(username?: string, password?: string) {
+    super(username, password);
+  }
+
+  async createUser(user: PersonModel) {
+    try {
+      const person = new Person(user);
+      await this.apiAuth();
+      return await this.peopleApi.createPerson(person);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.createUser.name}`, error);
+      return null;
     }
+  }
 
-    updateUser(username: string, details?: Person): Promise<any> {
-        if (details.id) {
-            delete details.id;
-        }
-
-        return this
-            .put(`/people/${username}`, { data: details })
-            .catch(this.handleError);
+  async getUser(username: string) {
+    try {
+      await this.apiAuth();
+      return await this.peopleApi.getPerson(username);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.getUser.name}`, error);
+      return null;
     }
+  }
 
-    createUser(username: string, password?: string, details?: Person): Promise<any> {
-        const person: Person = new Person(username, password, details);
-        const onSuccess = (response) => response;
-        const onError = (response) => {
-            return (response.statusCode === 409)
-                ? Promise.resolve(this.updateUser(username, person))
-                : Promise.reject(response);
-        };
-
-        return this
-            .post(`/people`, { data: person })
-            .then(onSuccess, onError)
-            .catch(this.handleError);
+  async updateUser(username: string, userDetails?: PersonModel) {
+    try {
+      await this.apiAuth();
+      return this.peopleApi.updatePerson(username, userDetails);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.updateUser.name}`, error);
+      return null;
     }
+  }
 
-    disableUser(username: string): Promise<any> {
-        return this.put(`/people/${username}`, { data: { enabled: false } })
-            .catch(this.handleError);
+  async disableUser(username: string) {
+    try {
+      return await this.updateUser(username, { enabled: false });
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.disableUser.name}`, error);
+      return null;
     }
+  }
 
-    changePassword(username: string, newPassword: string) {
-        return this.put(`/people/${username}`, { data: { password: newPassword } })
-            .catch(this.handleError);
+  async changePassword(username: string, newPassword: string) {
+    try {
+      return await this.updateUser(username, { password: newPassword });
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.changePassword.name}`, error);
+      return null;
     }
+  }
 }

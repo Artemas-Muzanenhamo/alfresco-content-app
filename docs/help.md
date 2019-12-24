@@ -1,23 +1,21 @@
+---
+Title: Get Help
+---
+
 # Where to get help
 
-There are several ways to get help with building applications using the Alfresco Application Development Framework:
+See below for the different ways you can get help when building applications using the Alfresco Application Development Framework.
 
 ## Alfresco Community
 
-Visit the Alfresco Community space where you can find many resources to help you get started building your application,
+Visit Alfresco Community for resources that will help you find information to get started building your application,
 along with blog posts from the Alfresco developers and much more:
 https://community.alfresco.com/community/application-development-framework
 
-## Alfresco ADF Gitter
-
-Join the vibrant community in Gitter where you can chat with experienced developers,
-including the Alfresco employees working directly on the ADF and this example application project:
-https://gitter.im/Alfresco/alfresco-ng2-components
-
 ## Alfresco Developer Support
 
-Developer Support is a subscription-based support offering delivered remotely
-by a dedicated team of development-focused, senior Support Engineers.
+Developer Support is a remote subscription-based support team that offers  
+development-focused, senior Support Engineers to help you with your installation.
 This support offering is best for customers and partners that require on-going support
 for their development teams and customized code.
 

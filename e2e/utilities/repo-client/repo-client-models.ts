@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -25,9 +25,7 @@
 
 import {
     ADMIN_USERNAME,
-    ADMIN_PASSWORD,
-    REPO_API_HOST,
-    REPO_API_TENANT
+    ADMIN_PASSWORD
 } from '../../configs';
 
 export class RepoClientAuth {
@@ -38,9 +36,4 @@ export class RepoClientAuth {
         public username: string = RepoClientAuth.DEFAULT_USERNAME,
         public password: string = RepoClientAuth.DEFAULT_PASSWORD
     ) {}
-}
-
-export class RepoClientConfig {
-    host?: string = REPO_API_HOST;
-    tenant?: string = REPO_API_TENANT;
 }

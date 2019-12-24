@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,119 +23,110 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { SITE_VISIBILITY, SIDEBAR_LABELS } from '../../configs';
-import { LoginPage, LogoutPage, BrowsingPage } from '../../pages/pages';
+import { SITE_VISIBILITY } from '../../configs';
+import { LoginPage, BrowsingPage } from '../../pages/pages';
 import { Utils } from '../../utilities/utils';
 import { RepoClient } from '../../utilities/repo-client/repo-client';
 
 describe('Recent Files', () => {
-    const username = `user-${Utils.random()}`;
+  const username = `user-${Utils.random()}`;
 
-    const folderName = `folder-${Utils.random()}`; let folderId;
-    const fileName1 = `file-${Utils.random()}.txt`;
-    const fileName2 = `file-${Utils.random()}.txt`; let file2Id;
-    const fileName3 = `file-${Utils.random()}.txt`;
+  const folderName = `folder-${Utils.random()}`; let folderId;
+  const fileName1 = `file-${Utils.random()}.txt`;
+  const fileName2 = `file-${Utils.random()}.txt`; let file2Id;
+  const fileName3 = `file-${Utils.random()}.txt`;
 
-    const siteName = `site-${Utils.random()}`;
-    const folderSite = `folder2-${Utils.random()}`; let folderSiteId;
-    const fileSite = `file-${Utils.random()}.txt`;
+  const siteName = `site-${Utils.random()}`;
+  const folderSite = `folder2-${Utils.random()}`; let folderSiteId;
+  const fileSite = `file-${Utils.random()}.txt`;
 
-    const apis = {
-        admin: new RepoClient(),
-        user: new RepoClient(username, username)
-    };
+  const apis = {
+    admin: new RepoClient(),
+    user: new RepoClient(username, username)
+  };
 
-    const loginPage = new LoginPage();
-    const logoutPage = new LogoutPage();
-    const recentFilesPage = new BrowsingPage();
-    const { dataTable } = recentFilesPage;
-    const { breadcrumb } = recentFilesPage.toolbar;
+  const loginPage = new LoginPage();
+  const page = new BrowsingPage();
+  const { dataTable, breadcrumb } = page;
 
-    beforeAll(done => {
-        apis.admin.people.createUser(username)
-            .then(() => apis.user.nodes.createFolders([ folderName ])).then(resp => folderId = resp.data.entry.id)
-            .then(() => apis.user.nodes.createFiles([ fileName1 ], folderName))
-            .then(() => apis.user.nodes.createFiles([ fileName2 ])).then(resp => file2Id = resp.data.entry.id)
-            .then(() => apis.user.nodes.createFiles([ fileName3 ]).then(resp => apis.user.nodes.deleteNodeById(resp.data.entry.id, false)))
+  beforeAll(async (done) => {
+    await apis.admin.people.createUser({ username });
+    folderId = (await apis.user.nodes.createFolders([ folderName ])).entry.id;
+    await apis.user.nodes.createFiles([ fileName1 ], folderName);
+    file2Id = (await apis.user.nodes.createFiles([ fileName2 ])).entry.id;
+    const id = (await apis.user.nodes.createFiles([ fileName3 ])).entry.id;
+    await apis.user.nodes.deleteNodeById(id, false);
 
-            .then(() => apis.user.sites.createSite(siteName, SITE_VISIBILITY.PUBLIC))
-            .then(() => apis.user.sites.getDocLibId(siteName))
-            .then(resp => apis.user.nodes.createFolder(folderSite, resp)).then(resp => folderSiteId = resp.data.entry.id)
-            .then(() => apis.user.nodes.createFile(fileSite, folderSiteId))
+    await apis.user.sites.createSite(siteName, SITE_VISIBILITY.PUBLIC);
+    const docLibId = await apis.user.sites.getDocLibId(siteName);
+    folderSiteId = (await apis.user.nodes.createFolder(folderSite, docLibId)).entry.id;
+    await apis.user.nodes.createFile(fileSite, folderSiteId);
 
-            .then(() => apis.user.search.waitForApi(username, { expect: 3 }))
+    await apis.user.search.waitForApi(username, { expect: 3 });
 
-            .then(() => loginPage.loginWith(username))
-            .then(done);
-    });
+    await loginPage.loginWith(username);
+    done();
+  });
 
-    beforeEach(done => {
-        recentFilesPage.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.RECENT_FILES)
-            .then(() => dataTable.waitForHeader())
-            .then(done);
-    });
+  beforeEach(async (done) => {
+    await page.clickRecentFilesAndWait();
+    done();
+  });
 
-    afterAll(done => {
-        Promise.all([
-            apis.user.nodes.deleteNodesById([ folderId, file2Id ]),
-            apis.user.sites.deleteSite(siteName),
-            apis.admin.trashcan.emptyTrash(),
-            logoutPage.load()
-        ])
-        .then(done);
-    });
+  afterAll(async (done) => {
+    await apis.user.nodes.deleteNodesById([ folderId, file2Id ]);
+    await apis.user.sites.deleteSite(siteName);
+    await apis.user.trashcan.emptyTrash();
+    done();
+  });
 
-    it('has the correct columns [C213168]', () => {
-        const labels = [ 'Name', 'Location', 'Size', 'Modified' ];
-        const elements = labels.map(label => dataTable.getColumnHeaderByLabel(label));
+  it('has the correct columns - [C213168]', async () => {
+    const expectedColumns = [ 'Thumbnail', 'Name', 'Location', 'Size', 'Modified' ];
+    const actualColumns = await dataTable.getColumnHeadersText();
 
-        expect(dataTable.getColumnHeaders().count()).toBe(4 + 1, 'Incorrect number of columns');
+    expect(actualColumns).toEqual(expectedColumns);
+  });
 
-        elements.forEach((element, index) => {
-            expect(element.isPresent()).toBe(true, `"${labels[index]}" is missing`);
-        });
-    });
+  it('default sorting column - [C213171]', async () => {
+    expect(await dataTable.getSortedColumnHeaderText()).toBe('Modified');
+    expect(await dataTable.getSortingOrder()).toBe('desc');
+  });
 
-    it('default sorting column [C213171]', () => {
-        expect(dataTable.getSortedColumnHeader().getText()).toBe('Modified');
-        expect(dataTable.getSortingOrder()).toBe('desc');
-    });
+  it('displays the files added by the current user in the last 30 days - [C213170]', async () => {
+    expect(await dataTable.countRows()).toEqual(3, 'Incorrect number of files displayed');
+    expect(await dataTable.isItemPresent(fileName1)).toBe(true, `${fileName1} not displayed`);
+    expect(await dataTable.isItemPresent(fileName2)).toBe(true, `${fileName2} not displayed`);
+    expect(await dataTable.isItemPresent(fileSite)).toBe(true, `${fileSite} not displayed`);
+  });
 
-    it('displays the files added by the current user in the last 30 days [C213170]', () => {
-        expect(dataTable.countRows()).toEqual(3, 'Incorrect number of files displayed');
-        expect(dataTable.getRowName(fileName1).isPresent()).toBe(true, `${fileName1} not displayed`);
-        expect(dataTable.getRowName(fileName2).isPresent()).toBe(true, `${fileName2} not displayed`);
-        expect(dataTable.getRowName(fileSite).isPresent()).toBe(true, `${fileSite} not displayed`);
-    });
+  it(`file not displayed if it's been deleted - [C213174]`, async () => {
+    expect(await dataTable.isItemPresent(fileName3)).not.toBe(true, `${fileName3} is displayed`);
+  });
 
-    it(`file not displayed if it's in the Trashcan [C213174]`, () => {
-        expect(dataTable.getRowName(fileName3).isPresent()).not.toBe(true, `${fileName3} is displayed`);
-    });
+  it('Location column displays the parent folder of the file - [C213175]', async () => {
+    expect(await dataTable.getItemLocation(fileName1)).toEqual(folderName);
+    expect(await dataTable.getItemLocation(fileName2)).toEqual('Personal Files');
+    expect(await dataTable.getItemLocation(fileSite)).toEqual(folderSite);
+  });
 
-    it('Location column displays the parent folder of the file [C213175]', () => {
-        expect(dataTable.getItemLocation(fileName1).getText()).toEqual(folderName);
-        expect(dataTable.getItemLocation(fileName2).getText()).toEqual('Personal Files');
-        expect(dataTable.getItemLocation(fileSite).getText()).toEqual(folderSite);
-    });
+  it('Location column displays a tooltip with the entire path of the file - [C213177]', async () => {
+    expect(await dataTable.getItemLocationTooltip(fileName1)).toEqual(`Personal Files/${folderName}`);
+    expect(await dataTable.getItemLocationTooltip(fileName2)).toEqual('Personal Files');
+    expect(await dataTable.getItemLocationTooltip(fileSite)).toEqual(`File Libraries/${siteName}/${folderSite}`);
+  });
 
-    it('Location column displays a tooltip with the entire path of the file [C213177]', () => {
-        expect(dataTable.getItemLocationTooltip(fileName1)).toEqual(`Personal Files/${folderName}`);
-        expect(dataTable.getItemLocationTooltip(fileName2)).toEqual('Personal Files');
-        expect(dataTable.getItemLocationTooltip(fileSite)).toEqual(`File Libraries/${siteName}/${folderSite}`);
-    });
+  it('Location column redirect - file in user Home - [C213176]', async () => {
+    await dataTable.clickItemLocation(fileName2);
+    expect(await breadcrumb.getAllItems()).toEqual([ 'Personal Files' ]);
+  });
 
-    it('Location column redirect - file in user Home [C213176] [C260968]', () => {
-        dataTable.clickItemLocation(fileName2)
-            .then(() => expect(breadcrumb.getAllItems()).toEqual([ 'Personal Files' ]));
-    });
+  it('Location column redirect - file in folder - [C280486]', async () => {
+    await dataTable.clickItemLocation(fileName1);
+    expect(await breadcrumb.getAllItems()).toEqual([ 'Personal Files', folderName ]);
+  });
 
-    it('Location column redirect - file in folder [C213176] [C260968]', () => {
-        dataTable.clickItemLocation(fileName1)
-            .then(() => expect(breadcrumb.getAllItems()).toEqual([ 'Personal Files', folderName ]));
-    });
-
-    it('Location column redirect - file in site [C213176] [C260969]', () => {
-        dataTable.clickItemLocation(fileSite)
-            .then(() => expect(breadcrumb.getAllItems()).toEqual([ 'File Libraries', siteName, folderSite ]));
-    });
+  it('Location column redirect - file in site - [C280487]', async () => {
+    await dataTable.clickItemLocation(fileSite);
+    expect(await breadcrumb.getAllItems()).toEqual([ 'My Libraries', siteName, folderSite ]);
+  });
 });

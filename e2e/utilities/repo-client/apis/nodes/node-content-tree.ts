@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -35,6 +35,7 @@ export interface NodeContentTree {
 
 export function flattenNodeContentTree(content: NodeContentTree, relativePath: string = '/'): NodeBodyCreate[] {
     const { name, files, folders, title, description } = content;
+    const aspectNames: string[] = ['cm:versionable'];
     let data: NodeBodyCreate[] = [];
     let properties: any;
 
@@ -75,7 +76,8 @@ export function flattenNodeContentTree(content: NodeContentTree, relativePath: s
             .map((filename: string): NodeBodyCreate => ({
                 nodeType: NODE_TYPE_FILE,
                 name: filename,
-                relativePath
+                relativePath,
+                aspectNames
             }));
 
         data = data.concat(filesData);

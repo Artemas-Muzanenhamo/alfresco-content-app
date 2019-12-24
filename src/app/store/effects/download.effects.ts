@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,89 +23,125 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DownloadZipDialogComponent } from '@alfresco/adf-content-services';
+import {
+  AppStore,
+  DownloadNodesAction,
+  NodeActionTypes,
+  NodeInfo,
+  getAppSelection
+} from '@alfresco/aca-shared/store';
+import { DownloadZipDialogComponent } from '@alfresco/adf-core';
+import { MinimalNodeEntity } from '@alfresco/js-api';
 import { Injectable } from '@angular/core';
-import { MatDialog } from '@angular/material';
+import { MatDialog } from '@angular/material/dialog';
 import { Actions, Effect, ofType } from '@ngrx/effects';
-import { map } from 'rxjs/operators';
-import { DownloadNodesAction, DOWNLOAD_NODES } from '../actions';
-import { NodeInfo } from '../models';
-import { ContentApiService } from '../../services/content-api.service';
+import { Store } from '@ngrx/store';
+import { map, take } from 'rxjs/operators';
+import { ContentApiService } from '@alfresco/aca-shared';
 
 @Injectable()
 export class DownloadEffects {
-    constructor(
-        private actions$: Actions,
-        private contentApi: ContentApiService,
-        private dialog: MatDialog
-    ) {}
+  constructor(
+    private store: Store<AppStore>,
+    private actions$: Actions,
+    private contentApi: ContentApiService,
+    private dialog: MatDialog
+  ) {}
 
-    @Effect({ dispatch: false })
-    downloadNode$ = this.actions$.pipe(
-      ofType<DownloadNodesAction>(DOWNLOAD_NODES),
-      map(action => {
-          if (action.payload && action.payload.length > 0) {
-            this.downloadNodes(action.payload);
-          }
-      })
-    );
-
-    private downloadNodes(nodes: Array<NodeInfo>) {
-        if (!nodes || nodes.length === 0) {
-            return;
-        }
-
-        if (nodes.length === 1) {
-            this.downloadNode(nodes[0]);
-        } else {
-            this.downloadZip(nodes);
-        }
-    }
-
-    private downloadNode(node: NodeInfo) {
-        if (node) {
-            if (node.isFolder) {
-                this.downloadZip([node]);
-            } else {
-                this.downloadFile(node);
+  @Effect({ dispatch: false })
+  downloadNode$ = this.actions$.pipe(
+    ofType<DownloadNodesAction>(NodeActionTypes.Download),
+    map(action => {
+      if (action.payload && action.payload.length > 0) {
+        this.downloadNodes(action.payload);
+      } else {
+        this.store
+          .select(getAppSelection)
+          .pipe(take(1))
+          .subscribe(selection => {
+            if (selection && !selection.isEmpty) {
+              this.downloadNodes(selection.nodes);
             }
-        }
+          });
+      }
+    })
+  );
+
+  private downloadNodes(toDownload: Array<MinimalNodeEntity>) {
+    const nodes = toDownload.map(node => {
+      const { id, nodeId, name, isFile, isFolder } = <any>node.entry;
+
+      return {
+        id: this.isSharedLinkPreview ? id : nodeId || id,
+        name,
+        isFile,
+        isFolder
+      };
+    });
+
+    if (!nodes || nodes.length === 0) {
+      return;
     }
 
-    private downloadFile(node: NodeInfo) {
-        if (node) {
-            this.download(
-                this.contentApi.getContentUrl(node.id, true),
-                node.name
-            );
-        }
+    if (nodes.length === 1) {
+      this.downloadNode(nodes[0]);
+    } else {
+      this.downloadZip(nodes);
+    }
+  }
+
+  private downloadNode(node: NodeInfo) {
+    if (node) {
+      if (node.isFolder) {
+        this.downloadZip([node]);
+      } else {
+        this.downloadFile(node);
+      }
+    }
+  }
+
+  private downloadFile(node: NodeInfo) {
+    if (node && !this.isSharedLinkPreview) {
+      this.download(this.contentApi.getContentUrl(node.id, true), node.name);
     }
 
-    private downloadZip(nodes: Array<NodeInfo>) {
-        if (nodes && nodes.length > 0) {
-            const nodeIds = nodes.map(node => node.id);
-
-            this.dialog.open(DownloadZipDialogComponent, {
-                width: '600px',
-                disableClose: true,
-                data: {
-                    nodeIds
-                }
-            });
-        }
+    if (node && this.isSharedLinkPreview) {
+      this.download(
+        this.contentApi.getSharedLinkContent(node.id, false),
+        node.name
+      );
     }
+  }
 
-    private download(url: string, fileName: string) {
-        if (url && fileName) {
-            const link = document.createElement('a');
+  private downloadZip(nodes: Array<NodeInfo>) {
+    if (nodes && nodes.length > 0) {
+      const nodeIds = nodes.map(node => node.id);
 
-            link.style.display = 'none';
-            link.download = fileName;
-            link.href = url;
-
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+      this.dialog.open(DownloadZipDialogComponent, {
+        width: '600px',
+        disableClose: true,
+        data: {
+          nodeIds
         }
+      });
     }
+  }
+
+  private download(url: string, fileName: string) {
+    if (url && fileName) {
+      const link = document.createElement('a');
+
+      link.style.display = 'none';
+      link.download = fileName;
+      link.href = url;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }
+
+  private get isSharedLinkPreview() {
+    return location.href.includes('/preview/s/');
+  }
 }

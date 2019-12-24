@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,159 +23,154 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { SITE_VISIBILITY, SITE_ROLES, SIDEBAR_LABELS } from '../../configs';
-import { LoginPage, LogoutPage, BrowsingPage } from '../../pages/pages';
+import { SITE_VISIBILITY, SITE_ROLES } from '../../configs';
+import { LoginPage, BrowsingPage } from '../../pages/pages';
 import { Utils } from '../../utilities/utils';
 import { RepoClient } from '../../utilities/repo-client/repo-client';
 
 describe('Special permissions', () => {
-    const username = `user-${Utils.random()}`;
-    const password = username;
+  const username = `user-${Utils.random()}`;
+  const password = username;
 
-    const apis = {
-        admin: new RepoClient(),
-        user: new RepoClient(username, password)
-    };
+  const apis = {
+    admin: new RepoClient(),
+    user: new RepoClient(username, password)
+  };
 
-    const loginPage = new LoginPage();
-    const logoutPage = new LogoutPage();
-    const recentFilesPage = new BrowsingPage();
-    const favoritesPage = new BrowsingPage();
-    const sharedPage = new BrowsingPage();
-    const { dataTable } = recentFilesPage;
+  const loginPage = new LoginPage();
+  const page = new BrowsingPage();
+  const { dataTable } = page;
+  const { searchInput } = page.header;
 
-    xit('');
+  beforeAll(async (done) => {
+    await apis.admin.people.createUser({ username });
+    done();
+  });
 
-    beforeAll(done => {
-        apis.admin.people.createUser(username).then(done);
+  describe('file not displayed if user no longer has permissions on it', () => {
+    const sitePrivate = `private-${Utils.random()}`;
+    const fileName = `file-${Utils.random()}.txt`;
+    let fileId;
+
+    beforeAll(async (done) => {
+      await apis.admin.sites.createSite(sitePrivate, SITE_VISIBILITY.PRIVATE);
+      await apis.admin.sites.addSiteMember(sitePrivate, username, SITE_ROLES.SITE_COLLABORATOR.ROLE);
+      const docLibId = await apis.admin.sites.getDocLibId(sitePrivate);
+      fileId = (await apis.admin.nodes.createFile(fileName, docLibId)).entry.id;
+      await apis.user.favorites.addFavoriteById('file', fileId);
+      await apis.admin.shared.shareFileById(fileId);
+      await apis.user.nodes.editNodeContent(fileId, 'edited by user');
+
+      await apis.user.search.waitForApi(username, { expect: 1 });
+      await apis.user.shared.waitForApi({ expect: 1 });
+
+      await loginPage.loginWith(username);
+      done();
     });
 
-    describe('file not displayed if user no longer has permissions on it', () => {
-        const sitePrivate = `private-${Utils.random()}`;
-        const fileName = `file-${Utils.random()}.txt`;
-        let fileId;
-
-        beforeAll(done => {
-            apis.admin.sites.createSite(sitePrivate, SITE_VISIBILITY.PRIVATE)
-                .then(() => apis.admin.sites.addSiteMember(sitePrivate, username, SITE_ROLES.SITE_COLLABORATOR))
-                .then(() => apis.admin.nodes.createFiles([ fileName ], `Sites/${sitePrivate}/documentLibrary`)
-                    .then(resp => fileId = resp.data.entry.id))
-                .then(() => apis.user.favorites.addFavoriteById('file', fileId))
-                .then(() => apis.admin.shared.shareFileById(fileId))
-                .then(() => apis.user.nodes.editNodeContent(fileId, 'edited by user'))
-
-                .then(() => apis.user.search.waitForApi(username, { expect: 1 }))
-                .then(() => apis.user.shared.waitForApi({ expect: 1 }))
-
-                .then(() => loginPage.loginWith(username))
-                .then(done);
-        });
-
-        afterEach(done => {
-            apis.admin.sites.addSiteMember(sitePrivate, username, SITE_ROLES.SITE_COLLABORATOR).then(done);
-        });
-
-        afterAll(done => {
-            Promise.all([
-                apis.admin.sites.deleteSite(sitePrivate),
-                logoutPage.load()
-            ])
-            .then(done);
-        });
-
-        it('on Recent Files [C213173]', () => {
-            recentFilesPage.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.RECENT_FILES)
-                .then(() => dataTable.waitForHeader())
-                .then(() => {
-                    expect(dataTable.countRows()).toBe(1, 'Incorrect number of items');
-                })
-                .then(() => apis.admin.sites.deleteSiteMember(sitePrivate, username))
-                .then(() => recentFilesPage.refresh())
-                .then(() => {
-                    expect(dataTable.countRows()).toBe(0, 'Incorrect number of items');
-                });
-        });
-
-        it('on Favorites [C213227]', () => {
-            favoritesPage.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.FAVORITES)
-                .then(() => dataTable.waitForHeader())
-                .then(() => {
-                    expect(dataTable.countRows()).toBe(1, 'Incorrect number of items');
-                })
-                .then(() => apis.admin.sites.deleteSiteMember(sitePrivate, username))
-                .then(() => favoritesPage.refresh())
-                .then(() => {
-                    expect(dataTable.countRows()).toBe(0, 'Incorrect number of items');
-                });
-        });
-
-        it('on Shared Files [C213116]', () => {
-            sharedPage.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.SHARED_FILES)
-                .then(() => dataTable.waitForHeader())
-                .then(() => {
-                    expect(dataTable.countRows()).toBe(1, 'Incorrect number of items');
-                })
-                .then(() => apis.admin.sites.deleteSiteMember(sitePrivate, username))
-                .then(() => sharedPage.refresh())
-                .then(() => {
-                    expect(dataTable.countRows()).toBe(0, 'Incorrect number of items');
-                });
-        });
+    afterEach(async (done) => {
+      await apis.admin.sites.addSiteMember(sitePrivate, username, SITE_ROLES.SITE_COLLABORATOR.ROLE);
+      done();
     });
 
-    describe(`Location column is empty if user doesn't have permissions on the file's parent folder`, () => {
-        const sitePrivate = `private-${Utils.random()}`;
-        const fileName = `file-${Utils.random()}.txt`;
-        let fileId;
-
-        beforeAll(done => {
-            apis.admin.sites.createSite(sitePrivate, SITE_VISIBILITY.PRIVATE)
-                .then(() => apis.admin.sites.addSiteMember(sitePrivate, username, SITE_ROLES.SITE_COLLABORATOR))
-                .then(() => apis.admin.sites.getDocLibId(sitePrivate))
-                .then(resp => apis.user.nodes.createFile(fileName, resp))
-                .then(resp => fileId = resp.data.entry.id)
-                .then(() => apis.user.favorites.addFavoriteById('file', fileId))
-                .then(() => apis.user.shared.shareFileById(fileId))
-                .then(() => apis.user.shared.waitForApi({ expect: 1 }))
-                .then(() => apis.user.search.waitForApi(username, { expect: 1 }))
-                .then(() => apis.admin.sites.deleteSiteMember(sitePrivate, username))
-                .then(() => loginPage.loginWith(username))
-                .then(done);
-        });
-
-        afterAll(done => {
-            Promise.all([
-                apis.admin.sites.deleteSite(sitePrivate),
-                logoutPage.load()
-            ])
-            .then(done);
-        });
-
-        it(`on Recent Files [C213178]`, () => {
-            recentFilesPage.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.RECENT_FILES)
-                .then(() => dataTable.waitForHeader())
-                .then(() => {
-                    expect(dataTable.countRows()).toBe(1, 'Incorrect number of items');
-                    expect(dataTable.getItemLocation(fileName).getText()).toEqual('');
-                });
-        });
-
-        it(`on Favorites [C213672]`, () => {
-            favoritesPage.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.FAVORITES)
-                .then(() => dataTable.waitForHeader())
-                .then(() => {
-                    expect(dataTable.countRows()).toBe(1, 'Incorrect number of items');
-                    expect(dataTable.getItemLocation(fileName).getText()).toEqual('');
-                });
-        });
-
-        it(`on Shared Files [C213668]`, () => {
-            sharedPage.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.SHARED_FILES)
-                .then(() => dataTable.waitForHeader())
-                .then(() => {
-                    expect(dataTable.countRows()).toBe(1, 'Incorrect number of items');
-                    expect(dataTable.getItemLocation(fileName).getText()).toEqual('');
-                });
-        });
+    afterAll(async (done) => {
+      await apis.admin.sites.deleteSite(sitePrivate);
+      done();
     });
+
+    it('on Recent Files - [C213173]', async () => {
+      await page.clickRecentFilesAndWait();
+      expect(await dataTable.countRows()).toBe(1, 'Incorrect number of items');
+      await apis.admin.sites.deleteSiteMember(sitePrivate, username);
+      await page.refresh();
+      expect(await dataTable.isEmptyList()).toBe(true, 'Items are still displayed');
+    });
+
+    it('on Favorites - [C213227]', async () => {
+      await page.clickFavoritesAndWait();
+      expect(await dataTable.countRows()).toBe(1, 'Incorrect number of items');
+      await apis.admin.sites.deleteSiteMember(sitePrivate, username);
+      await page.refresh();
+      expect(await dataTable.isEmptyList()).toBe(true, 'Items are still displayed');
+    });
+
+    it('on Shared Files - [C213116]', async () => {
+      await page.clickSharedFilesAndWait();
+      expect(await dataTable.countRows()).toBe(1, 'Incorrect number of items');
+      await apis.admin.sites.deleteSiteMember(sitePrivate, username);
+      await page.refresh();
+      expect(await dataTable.isEmptyList()).toBe(true, 'Items are still displayed');
+    });
+
+    it('on Search Results - [C290122]', async () => {
+      await searchInput.clickSearchButton();
+      await searchInput.checkFilesAndFolders();
+      await searchInput.searchFor(fileName);
+      await dataTable.waitForBody();
+
+      expect(await dataTable.isItemPresent(fileName)).toBe(true, `${fileName} is not displayed`);
+
+      await apis.admin.sites.deleteSiteMember(sitePrivate, username);
+
+      await searchInput.clickSearchButton();
+      await searchInput.checkFilesAndFolders();
+      await searchInput.searchFor(fileName);
+      await dataTable.waitForBody();
+
+      expect(await dataTable.isItemPresent(fileName)).toBe(false, `${fileName} is displayed`);
+    });
+  });
+
+  describe(`Location column is empty if user doesn't have permissions on the file's parent folder`, () => {
+    const sitePrivate = `private-${Utils.random()}`;
+    const fileName = `file-${Utils.random()}.txt`;
+    let fileId;
+
+    beforeAll(async (done) => {
+      await apis.admin.sites.createSite(sitePrivate, SITE_VISIBILITY.PRIVATE);
+      await apis.admin.sites.addSiteMember(sitePrivate, username, SITE_ROLES.SITE_COLLABORATOR.ROLE);
+      const docLibId = await apis.admin.sites.getDocLibId(sitePrivate);
+      fileId = (await apis.user.nodes.createFile(fileName, docLibId)).entry.id;
+      await apis.user.favorites.addFavoriteById('file', fileId);
+      await apis.user.shared.shareFileById(fileId);
+      await apis.user.shared.waitForApi({ expect: 1 });
+      await apis.user.search.waitForApi(username, { expect: 1 });
+      await apis.admin.sites.deleteSiteMember(sitePrivate, username);
+      await loginPage.loginWith(username);
+      done();
+    });
+
+    afterAll(async (done) => {
+      await apis.admin.sites.deleteSite(sitePrivate);
+      done();
+    });
+
+    it(`on Recent Files - [C213178]`, async () => {
+      await page.clickRecentFilesAndWait();
+      expect(await dataTable.countRows()).toBe(1, 'Incorrect number of items');
+      expect(await dataTable.getItemLocation(fileName)).toEqual('Unknown');
+    });
+
+    it(`on Favorites - [C213672]`, async () => {
+      await page.clickFavoritesAndWait();
+      expect(await dataTable.countRows()).toBe(1, 'Incorrect number of items');
+      expect(await dataTable.getItemLocation(fileName)).toEqual('Unknown');
+    });
+
+    it(`on Shared Files - [C213668]`, async () => {
+      await page.clickSharedFilesAndWait();
+      expect(await dataTable.countRows()).toBe(1, 'Incorrect number of items');
+      expect(await dataTable.getItemLocation(fileName)).toEqual('Unknown');
+    });
+
+    it('on Search results - [C306868]', async () => {
+      await searchInput.clickSearchButton();
+      await searchInput.checkFilesAndFolders();
+      await searchInput.searchFor(fileName);
+      await dataTable.waitForBody();
+
+      expect(await dataTable.isItemPresent(fileName)).toBe(true, `${fileName} is not displayed`);
+      expect(await dataTable.getItemLocation(fileName)).toEqual('Unknown');
+    });
+  });
 });

@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,76 +23,194 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Component, OnInit } from '@angular/core';
-import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import {
-    PageTitleService, AppConfigService,
-    AuthenticationService, AlfrescoApiService } from '@alfresco/adf-core';
+  AlfrescoApiService,
+  AppConfigService,
+  AuthenticationService,
+  FileUploadErrorEvent,
+  PageTitleService,
+  UploadService,
+  SharedLinksApiService
+} from '@alfresco/adf-core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute, Router, ActivationEnd } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { AppStore } from './store/states/app.state';
-import { SetHeaderColorAction, SetAppNameAction, SetLogoPathAction, SetLanguagePickerAction } from './store/actions';
+import { AppExtensionService } from './extensions/extension.service';
+import {
+  AppStore,
+  AppState,
+  SetCurrentUrlAction,
+  SetInitialStateAction,
+  SetUserProfileAction,
+  SnackbarErrorAction,
+  CloseModalDialogsAction,
+  SetRepositoryInfoAction
+} from '@alfresco/aca-shared/store';
+import { filter, takeUntil } from 'rxjs/operators';
+import { AppService, ContentApiService } from '@alfresco/aca-shared';
+import { DiscoveryEntry, GroupsApi, Group } from '@alfresco/js-api';
+import { Subject } from 'rxjs';
+import { INITIAL_APP_STATE } from './store/initial-state';
 
 @Component({
-    selector: 'app-root',
-    templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss']
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit {
-    constructor(
-        private route: ActivatedRoute,
-        private router: Router,
-        private pageTitle: PageTitleService,
-        private store: Store<AppStore>,
-        private config: AppConfigService,
-        private alfrescoApiService: AlfrescoApiService,
-        private authenticationService: AuthenticationService) {
-    }
+export class AppComponent implements OnInit, OnDestroy {
+  onDestroy$: Subject<boolean> = new Subject<boolean>();
+  pageHeading = '';
 
-    ngOnInit() {
-        this.alfrescoApiService.getInstance().on('error', (error) => {
-            if (error.status === 401) {
-                if (!this.authenticationService.isLoggedIn()) {
-                    this.router.navigate(['/login']);
-                }
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private pageTitle: PageTitleService,
+    private store: Store<AppStore>,
+    private config: AppConfigService,
+    private alfrescoApiService: AlfrescoApiService,
+    private authenticationService: AuthenticationService,
+    private uploadService: UploadService,
+    private extensions: AppExtensionService,
+    private contentApi: ContentApiService,
+    private appService: AppService,
+    private sharedLinksApiService: SharedLinksApiService
+  ) {}
+
+  ngOnInit() {
+    this.alfrescoApiService
+      .getInstance()
+      .on('error', (error: { status: number }) => {
+        if (error.status === 401) {
+          if (!this.authenticationService.isLoggedIn()) {
+            this.store.dispatch(new CloseModalDialogsAction());
+
+            let redirectUrl = this.route.snapshot.queryParams['redirectUrl'];
+            if (!redirectUrl) {
+              redirectUrl = this.router.url;
             }
-        });
 
-
-        this.loadAppSettings();
-
-        const { router, pageTitle, route } = this;
-
-        router
-            .events
-            .filter(event => event instanceof NavigationEnd)
-            .subscribe(() => {
-                let currentRoute = route.root;
-
-                while (currentRoute.firstChild) {
-                    currentRoute = currentRoute.firstChild;
-                }
-
-                const snapshot: any = currentRoute.snapshot || {};
-                const data: any = snapshot.data || {};
-
-                pageTitle.setTitle(data.title || '');
+            this.router.navigate(['/login'], {
+              queryParams: { redirectUrl: redirectUrl }
             });
+          }
+        }
+      });
+
+    this.loadAppSettings();
+
+    const { router, pageTitle } = this;
+
+    this.router.events
+      .pipe(
+        filter(
+          event =>
+            event instanceof ActivationEnd &&
+            event.snapshot.children.length === 0
+        )
+      )
+      .subscribe((event: ActivationEnd) => {
+        const snapshot: any = event.snapshot || {};
+        const data: any = snapshot.data || {};
+
+        this.pageHeading = data.title || '';
+        pageTitle.setTitle(data.title || '');
+        this.store.dispatch(new SetCurrentUrlAction(router.url));
+      });
+
+    this.router.config.unshift(...this.extensions.getApplicationRoutes());
+
+    this.uploadService.fileUploadError.subscribe(error =>
+      this.onFileUploadedError(error)
+    );
+
+    this.sharedLinksApiService.error
+      .pipe(takeUntil(this.onDestroy$))
+      .subscribe((err: { message: string }) => {
+        this.store.dispatch(new SnackbarErrorAction(err.message));
+      });
+
+    this.appService.ready$
+      .pipe(takeUntil(this.onDestroy$))
+      .subscribe(isReady => {
+        if (isReady) {
+          this.loadRepositoryStatus();
+          this.loadUserProfile();
+        }
+      });
+  }
+
+  ngOnDestroy() {
+    this.onDestroy$.next(true);
+    this.onDestroy$.complete();
+  }
+
+  private loadRepositoryStatus() {
+    this.contentApi
+      .getRepositoryInformation()
+      .subscribe((response: DiscoveryEntry) => {
+        this.store.dispatch(
+          new SetRepositoryInfoAction(response.entry.repository)
+        );
+      });
+  }
+
+  private async loadUserProfile() {
+    const groupsApi = new GroupsApi(this.alfrescoApiService.getInstance());
+    const paging = await groupsApi.listGroupMembershipsForPerson('-me-');
+    const groups: Group[] = [];
+
+    if (paging && paging.list && paging.list.entries) {
+      groups.push(...paging.list.entries.map(obj => obj.entry));
     }
 
-    private loadAppSettings() {
-        const headerColor = this.config.get<string>('headerColor');
-        if (headerColor) {
-            this.store.dispatch(new SetHeaderColorAction(headerColor));
-        }
-        const appName = this.config.get<string>('application.name');
-        if (appName) {
-            this.store.dispatch(new SetAppNameAction(appName));
-        }
-        const logoPath = this.config.get<string>('application.logo');
-        if (logoPath) {
-            this.store.dispatch(new SetLogoPathAction(logoPath));
-        }
-        const languagePicker = this.config.get<boolean>('languagePicker');
-        this.store.dispatch(new SetLanguagePickerAction(languagePicker));
+    this.contentApi.getPerson('-me-').subscribe(person => {
+      this.store.dispatch(
+        new SetUserProfileAction({ person: person.entry, groups })
+      );
+    });
+  }
+
+  loadAppSettings() {
+    let baseShareUrl = this.config.get<string>('baseShareUrl');
+    if (!baseShareUrl.endsWith('/')) {
+      baseShareUrl += '/';
     }
+
+    const state: AppState = {
+      ...INITIAL_APP_STATE,
+      languagePicker: this.config.get<boolean>('languagePicker'),
+      appName: this.config.get<string>('application.name'),
+      headerColor: this.config.get<string>('headerColor'),
+      logoPath: this.config.get<string>('application.logo'),
+      sharedUrl: baseShareUrl
+    };
+
+    this.store.dispatch(new SetInitialStateAction(state));
+  }
+
+  onFileUploadedError(error: FileUploadErrorEvent) {
+    let message = 'APP.MESSAGES.UPLOAD.ERROR.GENERIC';
+
+    if (error.error.status === 403) {
+      message = 'APP.MESSAGES.UPLOAD.ERROR.403';
+    }
+
+    if (error.error.status === 404) {
+      message = 'APP.MESSAGES.UPLOAD.ERROR.404';
+    }
+
+    if (error.error.status === 409) {
+      message = 'APP.MESSAGES.UPLOAD.ERROR.CONFLICT';
+    }
+
+    if (error.error.status === 500) {
+      message = 'APP.MESSAGES.UPLOAD.ERROR.500';
+    }
+
+    if (error.error.status === 504) {
+      message = 'APP.MESSAGES.UPLOAD.ERROR.504';
+    }
+
+    this.store.dispatch(new SnackbarErrorAction(message));
+  }
 }

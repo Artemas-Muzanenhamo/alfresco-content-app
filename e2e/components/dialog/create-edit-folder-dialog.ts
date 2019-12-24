@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,86 +23,114 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ElementFinder, by, browser, protractor, ExpectedConditions as EC, promise } from 'protractor';
+import { ElementFinder, by, browser, protractor, ExpectedConditions as EC } from 'protractor';
 import { BROWSER_WAIT_TIMEOUT } from '../../configs';
 import { Component } from '../component';
 import { Utils } from '../../utilities/utils';
 
 export class CreateOrEditFolderDialog extends Component {
-    private static selectors = {
-        root: 'adf-folder-dialog',
+  private static selectors = {
+    root: 'adf-folder-dialog',
 
-        title: '.mat-dialog-title',
-        nameInput: 'input[placeholder="Name" i]',
-        descriptionTextArea: 'textarea[placeholder="Description" i]',
-        button: '.mat-dialog-actions button',
-        validationMessage: '.mat-hint span'
-    };
+    title: '.mat-dialog-title',
+    nameInput: 'input[placeholder="Name" i]',
+    descriptionTextArea: 'textarea[placeholder="Description" i]',
+    button: '.mat-dialog-actions button',
+    validationMessage: '.mat-hint span'
+  };
 
-    title: ElementFinder = this.component.element(by.css(CreateOrEditFolderDialog.selectors.title));
-    nameInput: ElementFinder = this.component.element(by.css(CreateOrEditFolderDialog.selectors.nameInput));
-    descriptionTextArea: ElementFinder = this.component.element(by.css(CreateOrEditFolderDialog.selectors.descriptionTextArea));
-    createButton: ElementFinder = this.component.element(by.cssContainingText(CreateOrEditFolderDialog.selectors.button, 'Create'));
-    cancelButton: ElementFinder = this.component.element(by.cssContainingText(CreateOrEditFolderDialog.selectors.button, 'Cancel'));
-    updateButton: ElementFinder = this.component.element(by.cssContainingText(CreateOrEditFolderDialog.selectors.button, 'Update'));
-    validationMessage: ElementFinder = this.component.element(by.css(CreateOrEditFolderDialog.selectors.validationMessage));
+  title: ElementFinder = this.component.element(by.css(CreateOrEditFolderDialog.selectors.title));
+  nameInput: ElementFinder = this.component.element(by.css(CreateOrEditFolderDialog.selectors.nameInput));
+  descriptionTextArea: ElementFinder = this.component.element(by.css(CreateOrEditFolderDialog.selectors.descriptionTextArea));
+  createButton: ElementFinder = this.component.element(by.cssContainingText(CreateOrEditFolderDialog.selectors.button, 'Create'));
+  cancelButton: ElementFinder = this.component.element(by.cssContainingText(CreateOrEditFolderDialog.selectors.button, 'Cancel'));
+  updateButton: ElementFinder = this.component.element(by.cssContainingText(CreateOrEditFolderDialog.selectors.button, 'Update'));
+  validationMessage: ElementFinder = this.component.element(by.css(CreateOrEditFolderDialog.selectors.validationMessage));
 
-    constructor(ancestor?: ElementFinder) {
-        super(CreateOrEditFolderDialog.selectors.root, ancestor);
-    }
+  constructor(ancestor?: ElementFinder) {
+    super(CreateOrEditFolderDialog.selectors.root, ancestor);
+  }
 
-    waitForDialogToOpen() {
-        return browser.wait(EC.presenceOf(this.title), BROWSER_WAIT_TIMEOUT)
-            .then(() => browser.wait(EC.presenceOf(browser.element(by.css('.cdk-overlay-backdrop'))), BROWSER_WAIT_TIMEOUT));
+  async waitForDialogToOpen() {
+    await browser.wait(EC.presenceOf(this.title), BROWSER_WAIT_TIMEOUT);
+    await browser.wait(EC.presenceOf(browser.element(by.css('.cdk-overlay-backdrop'))), BROWSER_WAIT_TIMEOUT);
+  }
 
-    }
+  async waitForDialogToClose() {
+    await browser.wait(EC.stalenessOf(this.title), BROWSER_WAIT_TIMEOUT, '---- timeout waiting for dialog to close ----');
+  }
 
-    waitForDialogToClose() {
-        return browser.wait(EC.stalenessOf(this.title), BROWSER_WAIT_TIMEOUT);
-    }
+  async isDialogOpen() {
+    return browser.isElementPresent(by.css(CreateOrEditFolderDialog.selectors.root));
+  }
 
-    getTitle(): promise.Promise<string> {
-        return this.title.getText();
-    }
+  async getTitle() {
+    return this.title.getText();
+  }
 
-    isValidationMessageDisplayed(): promise.Promise<boolean> {
-        return this.validationMessage.isDisplayed();
-    }
+  async isValidationMessageDisplayed() {
+    return this.validationMessage.isDisplayed();
+  }
 
-    getValidationMessage(): promise.Promise<string> {
-        return this.isValidationMessageDisplayed()
-            .then(() => this.validationMessage.getText());
-    }
+  async isUpdateButtonEnabled() {
+    return this.updateButton.isEnabled();
+  }
 
-    enterName(name: string) {
-        return this.nameInput.clear()
-            // .then(() => this.nameInput.sendKeys(name));
-            .then(() => Utils.typeInField(this.nameInput, name));
-    }
+  async isCreateButtonEnabled() {
+    return this.createButton.isEnabled();
+  }
 
-    enterDescription(description: string) {
-        return this.descriptionTextArea.clear()
-            // .then(() => this.descriptionTextArea.sendKeys(description));
-            .then(() => Utils.typeInField(this.descriptionTextArea, description));
-    }
+  async isCancelButtonEnabled() {
+    return this.cancelButton.isEnabled();
+  }
 
-    deleteNameWithBackspace(): promise.Promise<void> {
-        return this.nameInput.clear()
-            .then(() => {
-                return this.nameInput.sendKeys(' ', protractor.Key.CONTROL, 'a', protractor.Key.NULL, protractor.Key.BACK_SPACE);
-            });
-    }
+  async isNameDisplayed() {
+    return this.nameInput.isDisplayed();
+  }
 
-    clickCreate() {
-        return this.createButton.click();
-    }
+  async isDescriptionDisplayed() {
+    return this.descriptionTextArea.isDisplayed();
+  }
 
-    clickCancel() {
-        return this.cancelButton.click()
-            .then(() => this.waitForDialogToClose());
-    }
+  async getValidationMessage() {
+    await this.isValidationMessageDisplayed();
+    return this.validationMessage.getText();
+  }
 
-    clickUpdate() {
-        return this.updateButton.click();
-    }
+  async getName() {
+    return this.nameInput.getAttribute('value');
+  }
+
+  async getDescription() {
+    return this.descriptionTextArea.getAttribute('value');
+  }
+
+  async enterName(name: string) {
+    await this.nameInput.clear();
+    await Utils.typeInField(this.nameInput, name);
+  }
+
+  async enterDescription(description: string) {
+    await this.descriptionTextArea.clear();
+    await Utils.typeInField(this.descriptionTextArea, description);
+  }
+
+  async deleteNameWithBackspace() {
+    await this.nameInput.clear();
+    await this.nameInput.sendKeys(' ', protractor.Key.CONTROL, 'a', protractor.Key.NULL, protractor.Key.BACK_SPACE);
+  }
+
+  async clickCreate() {
+    await this.createButton.click();
+  }
+
+  async clickCancel() {
+    await this.cancelButton.click();
+    await this.waitForDialogToClose();
+  }
+
+  async clickUpdate() {
+    await this.updateButton.click();
+  }
+
 }

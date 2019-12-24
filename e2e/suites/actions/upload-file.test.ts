@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,52 +23,45 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// import { browser, protractor, promise } from 'protractor';
-import { LoginPage, LogoutPage, BrowsingPage } from '../../pages/pages';
-import { SIDEBAR_LABELS } from '../../configs';
+import { LoginPage, BrowsingPage } from '../../pages/pages';
 import { RepoClient } from '../../utilities/repo-client/repo-client';
 import { Utils } from '../../utilities/utils';
 
 describe('Upload files', () => {
-    const username = `user-${Utils.random()}`;
+  const username = `user-${Utils.random()}`;
 
-    const folder1 = `folder1-${Utils.random()}`; let folder1Id;
+  const folder1 = `folder1-${Utils.random()}`; let folder1Id;
 
-    const apis = {
-        admin: new RepoClient(),
-        user: new RepoClient(username, username)
-    };
+  const apis = {
+    admin: new RepoClient(),
+    user: new RepoClient(username, username)
+  };
 
-    const loginPage = new LoginPage();
-    const logoutPage = new LogoutPage();
-    const page = new BrowsingPage();
-    const { dataTable } = page;
+  const loginPage = new LoginPage();
+  const page = new BrowsingPage();
+  const { dataTable } = page;
 
-    beforeAll(done => {
-        apis.admin.people.createUser(username)
-            .then(() => apis.user.nodes.createFolder(folder1).then(resp => folder1Id = resp.data.entry.id))
+  beforeAll(async (done) => {
+    await apis.admin.people.createUser({ username });
+    folder1Id = (await apis.user.nodes.createFolder(folder1)).entry.id;
 
-            .then(() => loginPage.loginWith(username))
-            .then(done);
-    });
+    await loginPage.loginWith(username);
+    done();
+  });
 
-    beforeEach(done => {
-        page.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.PERSONAL_FILES)
-            .then(() => dataTable.waitForHeader())
-            .then(done);
-    });
+  beforeEach(async (done) => {
+    await page.clickPersonalFilesAndWait();
+    done();
+  });
 
-    afterAll(done => {
-        Promise.all([
-            // apis.user.nodes.deleteNodeById(folder1Id),
-            logoutPage.load()
-        ])
-        .then(done);
-    });
+  afterAll(async (done) => {
+    await apis.user.nodes.deleteNodeById(folder1Id);
+    done();
+  });
 
-    it('Upload a file', () => {
-        dataTable.doubleClickOnItemName(folder1)
-            .then(() => page.sidenav.openNewMenu())
-            .then(() => page.sidenav.menu.uploadFile().sendKeys(`${__dirname}/create-folder.test.ts`));
-    });
+  it('Upload a file', async () => {
+    await dataTable.doubleClickOnRowByName(folder1);
+    await page.sidenav.openNewMenu();
+    await page.sidenav.menu.uploadFile().sendKeys(`${__dirname}/create-folder.test.ts`);
+  });
 });

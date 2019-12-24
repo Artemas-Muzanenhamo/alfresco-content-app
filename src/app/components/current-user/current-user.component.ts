@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -25,22 +25,36 @@
 
 import { Component, ViewEncapsulation } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { Observable } from 'rxjs/Rx';
-import { selectUser, appLanguagePicker } from '../../store/selectors/app.selectors';
-import { AppStore, ProfileState } from '../../store/states';
+import { Observable } from 'rxjs';
+import { ProfileState } from '@alfresco/adf-extensions';
+import {
+  AppStore,
+  SetSelectedNodesAction,
+  getUserProfile,
+  getLanguagePickerState
+} from '@alfresco/aca-shared/store';
+import { AppService } from '@alfresco/aca-shared';
 
 @Component({
-    selector: 'aca-current-user',
-    templateUrl: './current-user.component.html',
-    encapsulation: ViewEncapsulation.None,
-    host: { class: 'aca-current-user' }
+  selector: 'aca-current-user',
+  templateUrl: './current-user.component.html',
+  encapsulation: ViewEncapsulation.None,
+  host: { class: 'aca-current-user' }
 })
 export class CurrentUserComponent {
-    profile$: Observable<ProfileState>;
-    languagePicker$: Observable<boolean>;
+  profile$: Observable<ProfileState>;
+  languagePicker$: Observable<boolean>;
 
-    constructor(store: Store<AppStore>) {
-        this.profile$ = store.select(selectUser);
-        this.languagePicker$ = store.select(appLanguagePicker);
-    }
+  get showLogout(): boolean {
+    return !this.appService.withCredentials;
+  }
+
+  constructor(private store: Store<AppStore>, private appService: AppService) {
+    this.profile$ = this.store.select(getUserProfile);
+    this.languagePicker$ = store.select(getLanguagePickerState);
+  }
+
+  onLogoutEvent() {
+    this.store.dispatch(new SetSelectedNodesAction([]));
+  }
 }

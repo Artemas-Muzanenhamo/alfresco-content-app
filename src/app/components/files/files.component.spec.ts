@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,336 +23,271 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Observable } from 'rxjs/Rx';
-import { TestBed, fakeAsync, tick, ComponentFixture } from '@angular/core/testing';
+import {
+  TestBed,
+  fakeAsync,
+  tick,
+  ComponentFixture
+} from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import {
-    TimeAgoPipe, NodeNameTooltipPipe, FileSizePipe, NodeFavoriteDirective,
-    DataTableComponent, UploadService, AppConfigPipe
+  NodeFavoriteDirective,
+  DataTableComponent,
+  UploadService,
+  AppConfigPipe
 } from '@alfresco/adf-core';
 import { DocumentListComponent } from '@alfresco/adf-content-services';
-import { ContentManagementService } from '../../common/services/content-management.service';
-import { BrowsingFilesService } from '../../common/services/browsing-files.service';
-import { NodeActionsService } from '../../common/services/node-actions.service';
+import { NodeActionsService } from '../../services/node-actions.service';
 import { FilesComponent } from './files.component';
 import { AppTestingModule } from '../../testing/app-testing.module';
-import { ContentApiService } from '../../services/content-api.service';
+import { ContentApiService } from '@alfresco/aca-shared';
+import { of, throwError } from 'rxjs';
 
 describe('FilesComponent', () => {
-    let node;
-    let page;
-    let fixture: ComponentFixture<FilesComponent>;
-    let component: FilesComponent;
-    let contentManagementService: ContentManagementService;
-    let uploadService: UploadService;
-    let router: Router;
-    let browsingFilesService: BrowsingFilesService;
-    let nodeActionsService: NodeActionsService;
-    let contentApi: ContentApiService;
+  let node;
+  let fixture: ComponentFixture<FilesComponent>;
+  let component: FilesComponent;
+  let uploadService: UploadService;
+  let nodeActionsService: NodeActionsService;
+  let contentApi: ContentApiService;
+  let router = {
+    url: '',
+    navigate: jasmine.createSpy('navigate')
+  };
 
-    beforeAll(() => {
-        // testing only functional-wise not time-wise
-        Observable.prototype.debounceTime = function () { return this; };
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AppTestingModule],
+      declarations: [
+        FilesComponent,
+        DataTableComponent,
+        NodeFavoriteDirective,
+        DocumentListComponent,
+        AppConfigPipe
+      ],
+      providers: [
+        {
+          provide: Router,
+          useValue: router
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { data: { preferencePrefix: 'prefix' } },
+            params: of({ folderId: 'someId' })
+          }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
     });
 
+    fixture = TestBed.createComponent(FilesComponent);
+    component = fixture.componentInstance;
+
+    uploadService = TestBed.get(UploadService);
+    router = TestBed.get(Router);
+    nodeActionsService = TestBed.get(NodeActionsService);
+    contentApi = TestBed.get(ContentApiService);
+  });
+
+  beforeEach(() => {
+    node = { id: 'node-id', isFolder: true };
+    spyOn(component.documentList, 'loadFolder').and.callFake(() => {});
+  });
+
+  describe('Current page is valid', () => {
+    it('should be a valid current page', fakeAsync(() => {
+      spyOn(contentApi, 'getNode').and.returnValue(throwError(null));
+
+      component.ngOnInit();
+      fixture.detectChanges();
+      tick();
+
+      expect(component.isValidPath).toBe(false);
+    }));
+
+    it('should set current page as invalid path', fakeAsync(() => {
+      spyOn(contentApi, 'getNode').and.returnValue(of({ entry: node }));
+
+      component.ngOnInit();
+      tick();
+      fixture.detectChanges();
+
+      expect(component.isValidPath).toBe(true);
+    }));
+  });
+
+  describe('OnInit', () => {
+    it('should set current node', () => {
+      spyOn(contentApi, 'getNode').and.returnValue(of({ entry: node }));
+      fixture.detectChanges();
+      expect(component.node).toBe(node);
+    });
+
+    it('if should navigate to parent if node is not a folder', () => {
+      node.isFolder = false;
+      node.parentId = 'parent-id';
+      spyOn(contentApi, 'getNode').and.returnValue(of({ entry: node }));
+
+      fixture.detectChanges();
+
+      expect(router.navigate['calls'].argsFor(0)[0]).toEqual([
+        '/personal-files',
+        'parent-id'
+      ]);
+    });
+  });
+
+  describe('refresh on events', () => {
     beforeEach(() => {
-        TestBed.configureTestingModule({
-            imports: [ AppTestingModule ],
-            declarations: [
-                FilesComponent,
-                DataTableComponent,
-                TimeAgoPipe,
-                NodeNameTooltipPipe,
-                NodeFavoriteDirective,
-                DocumentListComponent,
-                FileSizePipe,
-                AppConfigPipe
-            ],
-            providers: [
-                { provide: ActivatedRoute, useValue: {
-                    snapshot: { data: { preferencePrefix: 'prefix' } },
-                    params: Observable.of({ folderId: 'someId' })
-                } }
-            ],
-            schemas: [ NO_ERRORS_SCHEMA ]
-        });
+      spyOn(contentApi, 'getNode').and.returnValue(of({ entry: node }));
+      spyOn(component, 'reload');
 
-        fixture = TestBed.createComponent(FilesComponent);
-        component = fixture.componentInstance;
-
-        contentManagementService = TestBed.get(ContentManagementService);
-        uploadService = TestBed.get(UploadService);
-        router = TestBed.get(Router);
-        browsingFilesService = TestBed.get(BrowsingFilesService);
-        nodeActionsService = TestBed.get(NodeActionsService);
-        contentApi = TestBed.get(ContentApiService);
+      fixture.detectChanges();
     });
 
+    it('should call refresh onContentCopied event if parent is the same', () => {
+      const nodes = [
+        <any>{ entry: { parentId: '1' } },
+        <any>{ entry: { parentId: '2' } }
+      ];
+
+      component.node = <any>{ id: '1' };
+
+      nodeActionsService.contentCopied.next(nodes);
+
+      expect(component.reload).toHaveBeenCalled();
+    });
+
+    it('should not call refresh onContentCopied event when parent mismatch', () => {
+      const nodes = [
+        <any>{ entry: { parentId: '1' } },
+        <any>{ entry: { parentId: '2' } }
+      ];
+
+      component.node = <any>{ id: '3' };
+
+      nodeActionsService.contentCopied.next(nodes);
+
+      expect(component.reload).not.toHaveBeenCalled();
+    });
+
+    it('should call refresh on fileUploadComplete event if parent node match', fakeAsync(() => {
+      const file = { file: { options: { parentId: 'parentId' } } };
+      component.node = <any>{ id: 'parentId' };
+
+      uploadService.fileUploadComplete.next(<any>file);
+
+      tick(500);
+
+      expect(component.reload).toHaveBeenCalled();
+    }));
+
+    it('should not call refresh on fileUploadComplete event if parent mismatch', fakeAsync(() => {
+      const file = { file: { options: { parentId: 'otherId' } } };
+      component.node = <any>{ id: 'parentId' };
+
+      uploadService.fileUploadComplete.next(<any>file);
+
+      tick(500);
+
+      expect(component.reload).not.toHaveBeenCalled();
+    }));
+
+    it('should call refresh on fileUploadDeleted event if parent node match', fakeAsync(() => {
+      const file = { file: { options: { parentId: 'parentId' } } };
+      component.node = <any>{ id: 'parentId' };
+
+      uploadService.fileUploadDeleted.next(<any>file);
+
+      tick(500);
+
+      expect(component.reload).toHaveBeenCalled();
+    }));
+
+    it('should not call refresh on fileUploadDeleted event if parent mismatch', fakeAsync(() => {
+      const file: any = { file: { options: { parentId: 'otherId' } } };
+      component.node = <any>{ id: 'parentId' };
+
+      uploadService.fileUploadDeleted.next(file);
+
+      tick(500);
+
+      expect(component.reload).not.toHaveBeenCalled();
+    }));
+  });
+
+  describe('onBreadcrumbNavigate()', () => {
     beforeEach(() => {
-        node = { id: 'node-id', isFolder: true };
-        page = {
-            list: {
-                entries: ['a', 'b', 'c'],
-                pagination: {}
-            }
-        };
-
-        spyOn(component.documentList, 'loadFolder').and.callFake(() => {});
+      spyOn(contentApi, 'getNode').and.returnValue(of({ entry: node }));
+      fixture.detectChanges();
     });
 
-    describe('Current page is valid', () => {
-        it('should be a valid current page', fakeAsync(() => {
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of({ entry: node }));
-            spyOn(component, 'fetchNodes').and.returnValue(Observable.throw(null));
+    it('should navigates to node id', () => {
+      const routeData: any = { id: 'some-where-over-the-rainbow' };
+      spyOn(component, 'navigate');
 
-            component.ngOnInit();
-            fixture.detectChanges();
-            tick();
+      component.onBreadcrumbNavigate(routeData);
 
-            expect(component.isValidPath).toBe(false);
-        }));
+      expect(component.navigate).toHaveBeenCalledWith(routeData.id);
+    });
+  });
 
-        it('should set current page as invalid path', fakeAsync(() => {
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of({ entry: node }));
-            spyOn(component, 'fetchNodes').and.returnValue(Observable.of(page));
-
-            component.ngOnInit();
-            tick();
-            fixture.detectChanges();
-
-            expect(component.isValidPath).toBe(true);
-        }));
+  describe('Node navigation', () => {
+    beforeEach(() => {
+      spyOn(contentApi, 'getNode').and.returnValue(of({ entry: node }));
+      fixture.detectChanges();
     });
 
-    describe('OnInit', () => {
-        it('should set current node', () => {
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of({ entry: node }));
-            spyOn(component, 'fetchNodes').and.returnValue(Observable.of(page));
+    it('should navigates to node when id provided', () => {
+      router.url = '/personal-files';
+      component.navigate(node.id);
 
-            fixture.detectChanges();
-
-            expect(component.node).toBe(node);
-        });
-
-        it('should get current node children', () => {
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of({ entry: node }));
-            spyOn(component, 'fetchNodes').and.returnValue(Observable.of(page));
-
-            fixture.detectChanges();
-
-            expect(component.fetchNodes).toHaveBeenCalled();
-        });
-
-        it('emits onChangeParent event', () => {
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of({ entry: node }));
-            spyOn(component, 'fetchNodes').and.returnValue(Observable.of(page));
-            spyOn(browsingFilesService.onChangeParent, 'next').and.callFake((val) => val);
-
-            fixture.detectChanges();
-
-            expect(browsingFilesService.onChangeParent.next)
-                .toHaveBeenCalledWith(node);
-        });
-
-        it('if should navigate to parent if node is not a folder', () => {
-            node.isFolder = false;
-            node.parentId = 'parent-id';
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of({ entry: node }));
-            spyOn(router, 'navigate');
-
-            fixture.detectChanges();
-
-            expect(router.navigate['calls'].argsFor(0)[0]).toEqual(['/personal-files', 'parent-id']);
-        });
+      expect(router.navigate).toHaveBeenCalledWith([
+        '/personal-files',
+        node.id
+      ]);
     });
 
-    describe('refresh on events', () => {
-        beforeEach(() => {
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of(node));
-            spyOn(component, 'fetchNodes').and.returnValue(Observable.of(page));
-            spyOn(component.documentList, 'reload');
+    it('should navigates to home when id not provided', () => {
+      router.url = '/personal-files';
+      component.navigate();
 
-            fixture.detectChanges();
-        });
-
-        it('should call refresh onContentCopied event if parent is the same', () => {
-            const nodes = [
-                {  entry: { parentId: '1' } },
-                {  entry: { parentId: '2' } }
-            ];
-
-            component.node =  <any>{ id: '1' };
-
-            nodeActionsService.contentCopied.next(<any>nodes);
-
-            expect(component.documentList.reload).toHaveBeenCalled();
-        });
-
-        it('should not call refresh onContentCopied event when parent mismatch', () => {
-            const nodes = [
-                {  entry: { parentId: '1' } },
-                {  entry: { parentId: '2' } }
-            ];
-
-            component.node =  <any>{ id: '3' };
-
-            nodeActionsService.contentCopied.next(<any>nodes);
-
-            expect(component.documentList.reload).not.toHaveBeenCalled();
-        });
-
-        it('should call refresh onCreateFolder event', () => {
-            contentManagementService.folderCreated.next();
-
-            expect(component.documentList.reload).toHaveBeenCalled();
-        });
-
-        it('should call refresh editFolder event', () => {
-            contentManagementService.folderEdited.next();
-
-            expect(component.documentList.reload).toHaveBeenCalled();
-        });
-
-        it('should call refresh deleteNode event', () => {
-            contentManagementService.nodesDeleted.next();
-
-            expect(component.documentList.reload).toHaveBeenCalled();
-        });
-
-        it('should call refresh moveNode event', () => {
-            contentManagementService.nodesMoved.next();
-
-            expect(component.documentList.reload).toHaveBeenCalled();
-        });
-
-        it('should call refresh restoreNode event', () => {
-            contentManagementService.nodesRestored.next();
-
-            expect(component.documentList.reload).toHaveBeenCalled();
-        });
-
-        it('should call refresh on fileUploadComplete event if parent node match', () => {
-            const file = { file: { options: { parentId: 'parentId' } } };
-            component.node =  <any>{ id: 'parentId' };
-
-            uploadService.fileUploadComplete.next(<any>file);
-
-            expect(component.documentList.reload).toHaveBeenCalled();
-        });
-
-        it('should not call refresh on fileUploadComplete event if parent mismatch', () => {
-            const file = { file: { options: { parentId: 'otherId' } } };
-            component.node =  <any>{ id: 'parentId' };
-
-            uploadService.fileUploadComplete.next(<any>file);
-
-            expect(component.documentList.reload).not.toHaveBeenCalled();
-        });
-
-        it('should call refresh on fileUploadDeleted event if parent node match', () => {
-            const file = { file: { options: { parentId: 'parentId' } } };
-            component.node =  <any>{ id: 'parentId' };
-
-            uploadService.fileUploadDeleted.next(<any>file);
-
-            expect(component.documentList.reload).toHaveBeenCalled();
-        });
-
-        it('should not call refresh on fileUploadDeleted event if parent mismatch', () => {
-            const file = { file: { options: { parentId: 'otherId' } } };
-            component.node =  <any>{ id: 'parentId' };
-
-            uploadService.fileUploadDeleted.next(<any>file);
-
-            expect(component.documentList.reload).not.toHaveBeenCalled();
-        });
+      expect(router.navigate).toHaveBeenCalledWith(['/personal-files']);
     });
 
-    describe('fetchNodes()', () => {
-        beforeEach(() => {
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of(node));
-            spyOn(contentApi, 'getNodeChildren').and.returnValue(Observable.of(page));
+    it('should navigate home if node is root', () => {
+      component.node = <any>{
+        path: {
+          elements: [{ id: 'node-id' }]
+        }
+      };
 
-            fixture.detectChanges();
-        });
+      router.url = '/personal-files';
+      component.navigate(node.id);
 
-        it('should call getNode api with node id', () => {
-            component.fetchNodes('nodeId');
+      expect(router.navigate).toHaveBeenCalledWith(['/personal-files']);
+    });
+  });
 
-            expect(contentApi.getNodeChildren).toHaveBeenCalledWith('nodeId');
-        });
+  describe('isSiteContainer', () => {
+    it('should return false if node has no aspectNames', () => {
+      const mock = <any>{ aspectNames: [] };
+
+      expect(component.isSiteContainer(mock)).toBe(false);
     });
 
-    describe('onBreadcrumbNavigate()', () => {
-        beforeEach(() => {
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of(node));
-            spyOn(component, 'fetchNodes').and.returnValue(Observable.of(page));
+    it('should return false if node is not site container', () => {
+      const mock = <any>{ aspectNames: ['something-else'] };
 
-            fixture.detectChanges();
-        });
-
-        it('should navigates to node id', () => {
-            const routeData = <any>{ id: 'some-where-over-the-rainbow' };
-            spyOn(component, 'navigate');
-
-            component.onBreadcrumbNavigate(routeData);
-
-            expect(component.navigate).toHaveBeenCalledWith(routeData.id);
-        });
+      expect(component.isSiteContainer(mock)).toBe(false);
     });
 
-    describe('Node navigation', () => {
-        beforeEach(() => {
-            spyOn(contentApi, 'getNode').and.returnValue(Observable.of(node));
-            spyOn(component, 'fetchNodes').and.returnValue(Observable.of(page));
-            spyOn(router, 'navigate');
+    it('should return true if node is a site container', () => {
+      const mock = <any>{ aspectNames: ['st:siteContainer'] };
 
-            fixture.detectChanges();
-        });
-
-        it('should navigates to node when id provided', () => {
-            component.navigate(node.id);
-
-            expect(router.navigate).toHaveBeenCalledWith(['./', node.id], jasmine.any(Object));
-        });
-
-        it('should navigates to home when id not provided', () => {
-            component.navigate();
-
-            expect(router.navigate).toHaveBeenCalledWith(['./'], jasmine.any(Object));
-        });
-
-        it('should navigate home if node is root', () => {
-            (<any>component).node = {
-                path: {
-                    elements: [ {id: 'node-id'} ]
-                }
-            };
-
-            component.navigate(node.id);
-
-            expect(router.navigate).toHaveBeenCalledWith(['./'], jasmine.any(Object));
-        });
+      expect(component.isSiteContainer(mock)).toBe(true);
     });
-
-    describe('isSiteContainer', () => {
-        it('should return false if node has no aspectNames', () => {
-            const mock  = { aspectNames: [] };
-
-            expect(component.isSiteContainer(mock)).toBe(false);
-        });
-
-        it('should return false if node is not site container', () => {
-            const mock  = { aspectNames: ['something-else'] };
-
-            expect(component.isSiteContainer(mock)).toBe(false);
-        });
-
-        it('should return true if node is a site container', () => {
-            const mock  = { aspectNames: [ 'st:siteContainer' ] };
-
-            expect(component.isSiteContainer(mock)).toBe(true);
-        });
-    });
+  });
 });

@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -24,31 +24,41 @@
  */
 
 import { NgModule } from '@angular/core';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import {
+  MatDialogModule,
+  MAT_DIALOG_DEFAULT_OPTIONS
+} from '@angular/material/dialog';
+import { MatInputModule } from '@angular/material/input';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+
+@NgModule({
+  imports: [
     MatMenuModule,
     MatIconModule,
     MatButtonModule,
     MatDialogModule,
     MatInputModule,
-    MatSnackBarModule
-} from '@angular/material';
-
-@NgModule({
-    imports: [
-        MatMenuModule,
-        MatIconModule,
-        MatButtonModule,
-        MatDialogModule,
-        MatInputModule,
-        MatSnackBarModule
-    ],
-    exports: [
-        MatMenuModule,
-        MatIconModule,
-        MatButtonModule,
-        MatDialogModule,
-        MatInputModule,
-        MatSnackBarModule
-    ]
+    MatSnackBarModule,
+    MatProgressBarModule
+  ],
+  exports: [
+    MatMenuModule,
+    MatIconModule,
+    MatButtonModule,
+    MatDialogModule,
+    MatInputModule,
+    MatSnackBarModule,
+    MatProgressBarModule
+  ],
+  providers: [
+    {
+      provide: MAT_DIALOG_DEFAULT_OPTIONS,
+      useValue: { closeOnNavigation: true, hasBackdrop: true, autoFocus: true }
+    }
+  ]
 })
 export class MaterialModule {}

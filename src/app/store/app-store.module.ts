@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -26,40 +26,41 @@
 import { NgModule } from '@angular/core';
 import { StoreModule } from '@ngrx/store';
 import { appReducer } from './reducers/app.reducer';
-import { INITIAL_STATE } from './states';
 import { StoreRouterConnectingModule } from '@ngrx/router-store';
 import { EffectsModule } from '@ngrx/effects';
 import { environment } from '../../environments/environment';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
+import { SharedStoreModule } from '@alfresco/aca-shared/store';
 import {
-    SnackbarEffects,
-    NodeEffects,
-    RouterEffects,
-    DownloadEffects,
-    ViewerEffects,
-    SearchEffects,
-    SiteEffects
+  AppEffects,
+  NodeEffects,
+  DownloadEffects,
+  ViewerEffects,
+  SearchEffects,
+  LibraryEffects,
+  UploadEffects,
+  FavoriteEffects
 } from './effects';
+import { INITIAL_STATE } from './initial-state';
 
 @NgModule({
-    imports: [
-        StoreModule.forRoot(
-            { app: appReducer },
-            { initialState: INITIAL_STATE }
-        ),
-        StoreRouterConnectingModule.forRoot({ stateKey: 'router' }),
-        EffectsModule.forRoot([
-            SnackbarEffects,
-            NodeEffects,
-            RouterEffects,
-            DownloadEffects,
-            ViewerEffects,
-            SearchEffects,
-            SiteEffects
-        ]),
-        !environment.production
-            ? StoreDevtoolsModule.instrument({ maxAge: 25 })
-            : []
-    ]
+  imports: [
+    StoreModule.forRoot({ app: appReducer }, { initialState: INITIAL_STATE }),
+    StoreRouterConnectingModule.forRoot({ stateKey: 'router' }),
+    SharedStoreModule,
+    EffectsModule.forRoot([
+      AppEffects,
+      NodeEffects,
+      DownloadEffects,
+      ViewerEffects,
+      SearchEffects,
+      LibraryEffects,
+      UploadEffects,
+      FavoriteEffects
+    ]),
+    !environment.production
+      ? StoreDevtoolsModule.instrument({ maxAge: 25 })
+      : []
+  ]
 })
 export class AppStoreModule {}

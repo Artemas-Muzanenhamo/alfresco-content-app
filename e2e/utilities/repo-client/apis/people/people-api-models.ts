@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,21 +23,31 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-export class Person {
-    id?: string;
+export interface PersonModel {
+    username?: string;
     password?: string;
     firstName?: string;
     lastName?: string;
     email?: string;
+    enabled?: boolean;
     properties?: any;
+}
 
-    constructor(username: string, password: string, details: Person) {
-        this.id = username;
-        this.password = password || username;
-        this.firstName = username;
-        this.lastName = username;
-        this.email = `${username}@alfresco.com`;
+export class Person {
+    id: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    enabled: boolean;
+    properties: any;
 
-        Object.assign(this, details);
+    constructor(user: PersonModel) {
+        this.id = user.username;
+        this.password = user.password || user.username;
+        this.firstName = user.firstName || user.username;
+        this.lastName = user.lastName || user.username;
+        this.email = user.email || `${user.username}@alfresco.com`;
+        this.enabled = user.enabled || true;
     }
 }

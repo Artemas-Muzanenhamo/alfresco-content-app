@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,42 +23,40 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ElementFinder, by, promise } from 'protractor';
+import { ElementFinder, by } from 'protractor';
 import { Menu } from '../menu/menu';
 import { Component } from '../component';
 
 export class UserInfo extends Component {
-    private locators = {
-        avatar: by.css('.current-user__avatar'),
-        fullName: by.css('.current-user__full-name'),
-        menuItems: by.css('[mat-menu-item]')
-    };
+  private static selectors = {
+    avatar: by.css('.current-user__avatar'),
+    fullName: by.css('.current-user__full-name'),
+    menuItems: by.css('[mat-menu-item]')
+  };
 
-    fullName: ElementFinder = this.component.element(this.locators.fullName);
-    avatar: ElementFinder = this.component.element(this.locators.avatar);
+  fullName: ElementFinder = this.component.element(UserInfo.selectors.fullName);
+  avatar: ElementFinder = this.component.element(UserInfo.selectors.avatar);
 
-    menu: Menu = new Menu();
+  menu: Menu = new Menu();
 
-    constructor(ancestor?: ElementFinder) {
-        super('aca-current-user', ancestor);
-    }
+  constructor(ancestor?: ElementFinder) {
+    super('aca-current-user', ancestor);
+  }
 
-    openMenu(): promise.Promise<Menu> {
-        const { menu, avatar } = this;
+  async openMenu() {
+    const { menu, avatar } = this;
 
-        return avatar.click()
-            .then(() => menu.wait())
-            .then(() => menu);
-    }
+    await avatar.click();
+    await menu.wait();
+    return menu;
+  }
 
-    get name(): promise.Promise<string> {
-        return this.fullName.getText();
-    }
+  getName() {
+    return this.fullName.getText();
+  }
 
-    signOut(): promise.Promise<void> {
-        return this.openMenu()
-            .then(menu => {
-                menu.clickMenuItem('Sign out');
-            });
-    }
+  async signOut() {
+    const menu = await this.openMenu();
+    await menu.clickMenuItem('Sign out');
+  }
 }

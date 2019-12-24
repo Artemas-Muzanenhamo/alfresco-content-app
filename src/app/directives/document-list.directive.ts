@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -25,135 +25,136 @@
 
 import { Directive, OnDestroy, OnInit, HostListener } from '@angular/core';
 import { DocumentListComponent } from '@alfresco/adf-content-services';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { UserPreferencesService } from '@alfresco/adf-core';
-import { Subscription } from 'rxjs/Rx';
+import { Subject } from 'rxjs';
 import { Store } from '@ngrx/store';
-import { AppStore } from '../store/states/app.state';
-import { SetSelectedNodesAction } from '../store/actions';
-import { MinimalNodeEntryEntity } from 'alfresco-js-api';
+import { SetSelectedNodesAction } from '@alfresco/aca-shared/store';
+import { takeUntil, filter } from 'rxjs/operators';
+import { ContentManagementService } from '../services/content-management.service';
+import { MinimalNodeEntity } from '@alfresco/js-api';
 
 @Directive({
-    selector: '[acaDocumentList]'
+  selector: '[acaDocumentList]'
 })
 export class DocumentListDirective implements OnInit, OnDestroy {
-    private subscriptions: Subscription[] = [];
+  private isLibrary = false;
+  selectedNode: MinimalNodeEntity;
 
-    get sortingPreferenceKey(): string {
-        return this.route.snapshot.data.sortingPreferenceKey;
+  onDestroy$ = new Subject<boolean>();
+
+  get sortingPreferenceKey(): string {
+    return this.route.snapshot.data.sortingPreferenceKey;
+  }
+
+  constructor(
+    private store: Store<any>,
+    private content: ContentManagementService,
+    private documentList: DocumentListComponent,
+    private preferences: UserPreferencesService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {}
+
+  ngOnInit() {
+    this.documentList.stickyHeader = true;
+    this.documentList.includeFields = ['isFavorite', 'aspectNames'];
+    this.isLibrary =
+      this.documentList.currentFolderId === '-mysites-' ||
+      // workaround for custom node list
+      this.router.url.endsWith('/libraries') ||
+      this.router.url.startsWith('/search-libraries');
+
+    if (this.sortingPreferenceKey) {
+      const current = this.documentList.sorting;
+
+      const key = this.preferences.get(
+        `${this.sortingPreferenceKey}.sorting.key`,
+        current[0]
+      );
+      const direction = this.preferences.get(
+        `${this.sortingPreferenceKey}.sorting.direction`,
+        current[1]
+      );
+
+      this.documentList.sorting = [key, direction];
+      // TODO: bug in ADF, the `sorting` binding is not updated when changed from code
+      this.documentList.data.setSorting({ key, direction });
     }
 
-    constructor(
-        private store: Store<AppStore>,
-        private documentList: DocumentListComponent,
-        private preferences: UserPreferencesService,
-        private route: ActivatedRoute
-    ) {}
+    this.documentList.ready
+      .pipe(
+        filter(() => !this.router.url.includes('viewer:view')),
+        takeUntil(this.onDestroy$)
+      )
+      .subscribe(() => this.onReady());
 
-    ngOnInit() {
-        this.documentList.includeFields = ['isFavorite', 'aspectNames'];
-        this.documentList.allowDropFiles = false;
+    this.content.reload.pipe(takeUntil(this.onDestroy$)).subscribe(() => {
+      this.reload(this.selectedNode);
+    });
 
-        if (this.sortingPreferenceKey) {
-            const current = this.documentList.sorting;
+    this.content.reset.pipe(takeUntil(this.onDestroy$)).subscribe(() => {
+      this.reset();
+    });
+  }
 
-            const key = this.preferences.get(
-                `${this.sortingPreferenceKey}.sorting.key`,
-                current[0]
-            );
-            const direction = this.preferences.get(
-                `${this.sortingPreferenceKey}.sorting.direction`,
-                current[1]
-            );
+  ngOnDestroy() {
+    this.onDestroy$.next(true);
+    this.onDestroy$.complete();
+  }
 
-            this.documentList.sorting = [key, direction];
-            // TODO: bug in ADF, the `sorting` binding is not updated when changed from code
-            this.documentList.data.setSorting({ key, direction });
-        }
-
-        this.subscriptions.push(
-            this.documentList.ready.subscribe(() => this.onReady())
-        );
+  @HostListener('sorting-changed', ['$event'])
+  onSortingChanged(event: CustomEvent) {
+    if (this.sortingPreferenceKey) {
+      this.preferences.set(
+        `${this.sortingPreferenceKey}.sorting.key`,
+        event.detail.key
+      );
+      this.preferences.set(
+        `${this.sortingPreferenceKey}.sorting.direction`,
+        event.detail.direction
+      );
     }
+  }
 
-    ngOnDestroy() {
-        this.subscriptions.forEach(subscription => subscription.unsubscribe());
-        this.subscriptions = [];
+  @HostListener('node-select', ['$event'])
+  onNodeSelect(event: CustomEvent) {
+    if (!!event.detail && !!event.detail.node) {
+      this.updateSelection();
+      this.selectedNode = event.detail.node;
     }
+  }
 
-    @HostListener('sorting-changed', ['$event'])
-    onSortingChanged(event: CustomEvent) {
-        if (this.sortingPreferenceKey) {
-            this.preferences.set(
-                `${this.sortingPreferenceKey}.sorting.key`,
-                event.detail.key
-            );
-            this.preferences.set(
-                `${this.sortingPreferenceKey}.sorting.direction`,
-                event.detail.direction
-            );
-        }
+  @HostListener('node-unselect')
+  onNodeUnselect() {
+    this.updateSelection();
+  }
+
+  onReady() {
+    this.updateSelection();
+  }
+
+  private updateSelection() {
+    const selection = this.documentList.selection.map(node => {
+      node['isLibrary'] = this.isLibrary;
+      return node;
+    });
+
+    this.store.dispatch(new SetSelectedNodesAction(selection));
+  }
+
+  private reload(selectedNode?: MinimalNodeEntity) {
+    this.documentList.resetSelection();
+    if (selectedNode) {
+      this.store.dispatch(new SetSelectedNodesAction([selectedNode]));
+    } else {
+      this.store.dispatch(new SetSelectedNodesAction([]));
     }
+    this.documentList.reload();
+  }
 
-    @HostListener('node-select', ['$event'])
-    onNodeSelect(event: CustomEvent) {
-        if (!!event.detail && !!event.detail.node) {
-            const node: MinimalNodeEntryEntity = event.detail.node.entry;
-            if (node && this.isLockedNode(node)) {
-                this.unSelectLockedNodes(this.documentList);
-            }
-
-            this.store.dispatch(
-                new SetSelectedNodesAction(this.documentList.selection)
-            );
-        }
-    }
-
-    @HostListener('node-unselect')
-    onNodeUnselect() {
-        this.store.dispatch(
-            new SetSelectedNodesAction(this.documentList.selection)
-        );
-    }
-
-    onReady() {
-        this.store.dispatch(
-            new SetSelectedNodesAction(this.documentList.selection)
-        );
-    }
-
-    private isLockedNode(node): boolean {
-        return (
-            node.isLocked ||
-            (node.properties &&
-                node.properties['cm:lockType'] === 'READ_ONLY_LOCK')
-        );
-    }
-
-    private isLockedRow(row): boolean {
-        return (
-            row.getValue('isLocked') ||
-            (row.getValue('properties') &&
-                row.getValue('properties')['cm:lockType'] === 'READ_ONLY_LOCK')
-        );
-    }
-
-    private unSelectLockedNodes(documentList: DocumentListComponent) {
-        documentList.selection = documentList.selection.filter(
-            item => !this.isLockedNode(item.entry)
-        );
-
-        const dataTable = documentList.dataTable;
-        if (dataTable && dataTable.data) {
-            const rows = dataTable.data.getRows();
-
-            if (rows && rows.length > 0) {
-                rows.forEach(r => {
-                    if (this.isLockedRow(r)) {
-                        r.isSelected = false;
-                    }
-                });
-            }
-        }
-    }
+  private reset() {
+    this.documentList.resetSelection();
+    this.store.dispatch(new SetSelectedNodesAction([]));
+  }
 }

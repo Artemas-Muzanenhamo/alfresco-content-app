@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -24,56 +24,86 @@
  */
 
 import { RepoApi } from '../repo-api';
-import { NodesApi } from '../nodes/nodes-api';
-import { RepoClient } from './../../repo-client';
 import { Utils } from '../../../../utilities/utils';
+import { SharedlinksApi as AdfSharedlinksApi, SharedLinkEntry } from '@alfresco/js-api';
 
 export class SharedLinksApi extends RepoApi {
+  sharedlinksApi = new AdfSharedlinksApi(this.alfrescoJsApi);
 
-    shareFileById(id: string): Promise<any> {
-        const data = [{ nodeId: id }];
+  constructor(username?, password?) {
+    super(username, password);
+  }
 
-        return this.post(`/shared-links`, { data })
-            .catch(this.handleError);
+  async shareFileById(id: string, expireDate?: Date): Promise<SharedLinkEntry|null> {
+    try {
+      await this.apiAuth();
+      const data = {
+        nodeId: id,
+        expiresAt: expireDate
+      };
+      return await this.sharedlinksApi.createSharedLink(data);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.shareFileById.name}`, error);
+      return null;
     }
+  }
 
-    shareFilesByIds(ids: string[]): Promise<any[]> {
-        return ids.reduce((previous, current) => (
-            previous.then(() => this.shareFileById(current))
-        ), Promise.resolve());
+  async shareFilesByIds(ids: string[]) {
+    try {
+      return await ids.reduce(async (previous: any, current: any) => {
+        await previous;
+        return await this.shareFileById(current);
+      }, Promise.resolve());
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.shareFilesByIds.name}`, error);
     }
+  }
 
-    getSharedIdOfNode(name: string) {
-        return this.getSharedLinks()
-            .then(resp => resp.data.list.entries.find(entries => entries.entry.name === name))
-            .then(resp => resp.entry.id)
-            .catch(this.handleError);
+  async getSharedIdOfNode(name: string) {
+    try {
+      const sharedLinks = (await this.getSharedLinks()).list.entries;
+      const found = sharedLinks.find(sharedLink => sharedLink.entry.name === name);
+      return (found || { entry: { id: null } }).entry.id;
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.getSharedIdOfNode.name}`, error);
+      return null;
     }
+  }
 
-    unshareFile(name: string) {
-        return this.getSharedIdOfNode(name)
-            .then(id => this.delete(`/shared-links/${id}`))
-            .catch(this.handleError);
+  async unshareFile(name: string) {
+    try {
+      const id = await this.getSharedIdOfNode(name);
+      return await this.sharedlinksApi.deleteSharedLink(id);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.unshareFile.name}`, error);
     }
+  }
 
-    getSharedLinks(): Promise<any> {
-        return this.get(`/shared-links`)
-            .catch(this.handleError);
+  async getSharedLinks() {
+    try {
+      await this.apiAuth();
+      return await this.sharedlinksApi.listSharedLinks();
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.getSharedLinks.name}`, error);
+      return null;
     }
+  }
 
-    waitForApi(data) {
-        const sharedFiles = () => {
-            return this.getSharedLinks()
-                .then(response => response.data.list.pagination.totalItems)
-                .then(totalItems => {
-                    if ( totalItems < data.expect) {
-                        return Promise.reject(totalItems);
-                    } else {
-                        return Promise.resolve(totalItems);
-                    }
-                });
-        };
+  async waitForApi(data: { expect: number }) {
+    try {
+      const sharedFiles = async () => {
+        const totalItems = (await this.getSharedLinks()).list.pagination.totalItems;
+        if ( totalItems !== data.expect ) {
+            return Promise.reject(totalItems);
+        } else {
+            return Promise.resolve(totalItems);
+        }
+      };
 
-        return Utils.retryCall(sharedFiles);
+      return await Utils.retryCall(sharedFiles);
+    } catch (error) {
+      console.log(`${this.constructor.name} ${this.waitForApi.name} catch: `);
+      console.log(`\tExpected: ${data.expect} items, but found ${error}`);
     }
+  }
 }

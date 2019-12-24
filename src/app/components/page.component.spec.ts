@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -26,31 +26,31 @@
 import { PageComponent } from './page.component';
 
 class TestClass extends PageComponent {
-    node: any;
+  node: any;
 
-    constructor() {
-        super(null);
-    }
+  constructor() {
+    super(null, null, null);
+  }
 }
 
 describe('PageComponent', () => {
-    let component: TestClass;
+  let component: TestClass;
 
-    beforeEach(() => {
-        component = new TestClass();
+  beforeEach(() => {
+    component = new TestClass();
+  });
+
+  describe('getParentNodeId()', () => {
+    it('returns parent node id when node is set', () => {
+      component.node = { id: 'node-id' };
+
+      expect(component.getParentNodeId()).toBe('node-id');
     });
 
-    describe('getParentNodeId()', () => {
-        it('returns parent node id when node is set', () => {
-            component.node = { id: 'node-id' };
+    it('returns null when node is not set', () => {
+      component.node = null;
 
-            expect(component.getParentNodeId()).toBe('node-id');
-        });
-
-        it('returns null when node is not set', () => {
-            component.node = null;
-
-            expect(component.getParentNodeId()).toBe(null);
-        });
+      expect(component.getParentNodeId()).toBe(null);
     });
+  });
 });

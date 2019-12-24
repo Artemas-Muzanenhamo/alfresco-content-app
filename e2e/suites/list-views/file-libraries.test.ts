@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,139 +23,218 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { by } from 'protractor';
-
-import { SITE_VISIBILITY, SITE_ROLES, SIDEBAR_LABELS } from '../../configs';
-import { LoginPage, LogoutPage, BrowsingPage } from '../../pages/pages';
+import { SITE_VISIBILITY, SITE_ROLES } from '../../configs';
+import { LoginPage, BrowsingPage } from '../../pages/pages';
 import { Utils } from '../../utilities/utils';
 import { RepoClient } from '../../utilities/repo-client/repo-client';
 
 describe('File Libraries', () => {
-    const username = `user-${Utils.random()}`;
-    const password = username;
+  const username = `user-${Utils.random()}`;
+  const password = username;
 
-    const sitePrivate = `private-${Utils.random()}`;
-    const siteModerated = `moderated-${Utils.random()}`;
-    const sitePublic = `public-${Utils.random()}`;
-    const siteName = `siteName-${Utils.random()}`;
-    const siteId1 = Utils.random();
-    const siteId2 = Utils.random();
-    const adminSite = `admin-${Utils.random()}`;
+  const userSitePrivate = `user-private-${Utils.random()}`;
+  const userSiteModerated = `user-moderated-${Utils.random()}`;
+  const userSitePublic = `user-public-${Utils.random()}`;
 
-    const siteDescription = 'my site description';
+  const siteName = `siteName-${Utils.random()}`;
 
-    const apis = {
-        admin: new RepoClient(),
-        user: new RepoClient(username, password)
-    };
+  const siteId1 = Utils.random();
+  const siteId2 = Utils.random();
 
-    const loginPage = new LoginPage();
-    const logoutPage = new LogoutPage();
-    const fileLibrariesPage = new BrowsingPage();
-    const { dataTable } = fileLibrariesPage;
+  const adminSite1 = `admin1-${Utils.random()}`;
+  const adminSite2 = `admin2-${Utils.random()}`;
+  const adminSite3 = `admin3-${Utils.random()}`;
+  const adminSite4 = `admin4-${Utils.random()}`;
+  const adminSite5 = `admin5-${Utils.random()}`;
+  const adminSite6 = `admin6-${Utils.random()}`;
 
-    beforeAll(done => {
-        Promise
-            .all([
-                apis.admin.people.createUser(username),
-                apis.admin.sites.createSite(sitePublic, SITE_VISIBILITY.PUBLIC),
-                apis.admin.sites.createSite(siteModerated, SITE_VISIBILITY.MODERATED, { description: siteDescription }),
-                apis.admin.sites.createSite(sitePrivate, SITE_VISIBILITY.PRIVATE, { description: '' }),
-                apis.admin.sites.createSite(adminSite, SITE_VISIBILITY.PUBLIC),
-                apis.admin.sites.createSite(siteName, SITE_VISIBILITY.PUBLIC, { id: siteId1 }),
-                apis.admin.sites.createSite(siteName, SITE_VISIBILITY.PUBLIC, { id: siteId2 })
-            ])
-            .then(() => apis.admin.sites.addSiteMember(sitePublic, username, SITE_ROLES.SITE_CONSUMER))
-            .then(() => apis.admin.sites.addSiteMember(siteModerated, username, SITE_ROLES.SITE_MANAGER))
-            .then(() => apis.admin.sites.addSiteMember(sitePrivate, username, SITE_ROLES.SITE_CONTRIBUTOR))
-            .then(() => apis.admin.sites.addSiteMember(siteId1, username, SITE_ROLES.SITE_CONTRIBUTOR))
-            .then(() => apis.admin.sites.addSiteMember(siteId2, username, SITE_ROLES.SITE_CONTRIBUTOR))
+  const siteDescription = 'my site description';
 
-            .then(() => loginPage.loginWith(username))
-            .then(done);
+  const apis = {
+    admin: new RepoClient(),
+    user: new RepoClient(username, password)
+  };
+
+  const loginPage = new LoginPage();
+  const page = new BrowsingPage();
+  const { dataTable } = page;
+
+  beforeAll(async (done) => {
+    await apis.admin.people.createUser({ username });
+
+    await apis.user.sites.createSite(userSitePublic, SITE_VISIBILITY.PUBLIC);
+    await apis.user.sites.createSite(userSiteModerated, SITE_VISIBILITY.MODERATED, siteDescription);
+    await apis.user.sites.createSite(userSitePrivate, SITE_VISIBILITY.PRIVATE, null);
+
+    await apis.admin.sites.createSite(adminSite1, SITE_VISIBILITY.PUBLIC);
+    await apis.admin.sites.createSite(adminSite2, SITE_VISIBILITY.PUBLIC);
+    await apis.admin.sites.createSite(adminSite3, SITE_VISIBILITY.PUBLIC);
+    await apis.admin.sites.createSite(adminSite4, SITE_VISIBILITY.PUBLIC);
+    await apis.admin.sites.createSite(adminSite5, SITE_VISIBILITY.PUBLIC);
+    await apis.admin.sites.createSite(adminSite6, SITE_VISIBILITY.PUBLIC);
+    await apis.admin.sites.addSiteMember(adminSite1, username, SITE_ROLES.SITE_CONSUMER.ROLE);
+    await apis.admin.sites.addSiteMember(adminSite2, username, SITE_ROLES.SITE_CONTRIBUTOR.ROLE);
+    await apis.admin.sites.addSiteMember(adminSite3, username, SITE_ROLES.SITE_COLLABORATOR.ROLE);
+    await apis.admin.sites.addSiteMember(adminSite4, username, SITE_ROLES.SITE_MANAGER.ROLE);
+    await apis.admin.sites.addSiteMember(adminSite6, username, SITE_ROLES.SITE_CONSUMER.ROLE);
+
+    await apis.user.favorites.addFavoriteById('site', adminSite1);
+    await apis.user.favorites.addFavoriteById('site', adminSite2);
+    await apis.user.favorites.addFavoriteById('site', adminSite3);
+    await apis.user.favorites.addFavoriteById('site', adminSite4);
+
+    await apis.user.sites.createSite(siteName, SITE_VISIBILITY.PUBLIC, null, siteId1);
+    await apis.user.sites.createSite(siteName, SITE_VISIBILITY.PUBLIC, null, siteId2);
+
+    await loginPage.loginWith(username);
+    done();
+  });
+
+  afterAll(async (done) => {
+    await apis.user.sites.deleteSites([ userSitePublic, userSiteModerated, userSitePrivate, siteId1, siteId2 ]);
+    await apis.admin.sites.deleteSites([ adminSite1, adminSite2, adminSite3, adminSite4, adminSite5, adminSite6 ]);
+    done();
+  });
+
+  describe('My Libraries', () => {
+    beforeEach(async (done) => {
+      await page.goToMyLibrariesAndWait();
+      done();
     });
 
-    beforeEach(done => {
-        fileLibrariesPage.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.FILE_LIBRARIES)
-            .then(() => dataTable.waitForHeader())
-            .then(done);
+    it('has the correct columns - [C217095]', async () => {
+      const expectedColumns = [ 'Thumbnail', 'Name', 'My Role', 'Visibility' ];
+      const actualColumns = await dataTable.getColumnHeadersText();
+
+      expect(actualColumns).toEqual(expectedColumns);
     });
 
-    afterAll(done => {
-        Promise.all([
-            apis.admin.sites.deleteSites([
-                sitePublic,
-                siteModerated,
-                sitePrivate,
-                adminSite,
-                siteId1,
-                siteId2
-            ]),
-            logoutPage.load()
-        ])
-        .then(done);
+    it('User can see only the sites he is a member of - [C280501]', async () => {
+      const sitesCount = await dataTable.countRows();
+
+      expect(sitesCount).toEqual(10, 'Incorrect number of sites displayed');
+      expect(await dataTable.isItemPresent(adminSite5)).toBe(false, `${adminSite5} should not appear in the list`);
     });
 
-    it('has the correct columns', () => {
-        const labels = [ 'Title', 'Status' ];
-        const elements = labels.map(label => dataTable.getColumnHeaderByLabel(label));
+    it('Library visibility is correctly displayed - [C289905]', async () => {
+      const expectedSitesVisibility = {
+        [userSitePrivate]: SITE_VISIBILITY.PRIVATE,
+        [userSiteModerated]: SITE_VISIBILITY.MODERATED,
+        [userSitePublic]: SITE_VISIBILITY.PUBLIC
+      };
 
-        expect(dataTable.getColumnHeaders().count()).toBe(2 + 1, 'Incorrect number of columns');
+      const sitesList = await dataTable.getSitesNameAndVisibility();
 
-        elements.forEach((element, index) => {
-            expect(element.isPresent()).toBe(true, `"${labels[index]}" is missing`);
-        });
+      for (const site of Object.keys(expectedSitesVisibility)) {
+        expect(sitesList[site]).toEqual(expectedSitesVisibility[site]);
+      }
     });
 
-    it('User can see only the sites he is a member of [C217095]', () => {
-        const sitesCount = dataTable.countRows();
+    it('User role is correctly displayed - [C289903]', async () => {
+      const expectedSitesRoles = {
+        [adminSite1]: SITE_ROLES.SITE_CONSUMER.LABEL,
+        [adminSite2]: SITE_ROLES.SITE_CONTRIBUTOR.LABEL,
+        [adminSite3]: SITE_ROLES.SITE_COLLABORATOR.LABEL,
+        [adminSite4]: SITE_ROLES.SITE_MANAGER.LABEL
+      };
 
-        const expectedSites = {
-            [sitePrivate]: SITE_VISIBILITY.PRIVATE,
-            [siteModerated]: SITE_VISIBILITY.MODERATED,
-            [sitePublic]: SITE_VISIBILITY.PUBLIC
-        };
+      const sitesList = await dataTable.getSitesNameAndRole();
 
-        expect(sitesCount).toEqual(5, 'Incorrect number of sites displayed');
-        expect(dataTable.getRowName(adminSite).isPresent()).toBe(false, 'Incorrect site appears in list');
-
-        dataTable.getRows()
-            .map((row) => {
-                return row.all(dataTable.cell).map(cell => cell.getText());
-            })
-            .then((rowCells) => {
-                return rowCells.reduce((acc, cell) => {
-                    acc[cell[1]] = cell[2].toUpperCase();
-                    return acc;
-                }, {});
-            })
-            .then((sitesList) => {
-                Object.keys(expectedSites).forEach((site) => {
-                    expect(sitesList[site]).toEqual(expectedSites[site]);
-                });
-            });
+      for (const site of Object.keys(expectedSitesRoles)) {
+        expect(sitesList[site]).toEqual(expectedSitesRoles[site]);
+      }
     });
 
-    it('Site ID is displayed when two sites have the same name [C217098]', () => {
-        const expectedSites = [
-            `${siteName} (${siteId1})`,
-            `${siteName} (${siteId2})`
-        ];
-        dataTable.getCellsContainingName(siteName)
-            .then(resp => {
-                const expectedJSON = JSON.stringify(expectedSites.sort());
-                const actualJSON = JSON.stringify(resp.sort());
-                expect(actualJSON).toEqual(expectedJSON);
-            });
+    it('Site ID is displayed when two sites have the same name - [C217098]', async () => {
+      const expectedSites = [
+        `${siteName} (${siteId1})`,
+        `${siteName} (${siteId2})`
+      ];
+      const cells = await dataTable.getCellsContainingName(siteName);
+      const expectedJSON = JSON.stringify(expectedSites.sort());
+      const actualJSON = JSON.stringify(cells.sort());
+      expect(actualJSON).toEqual(expectedJSON);
     });
 
-    it('Tooltip for sites without description [C217096]', () => {
-        const tooltip = dataTable.getItemNameTooltip(sitePrivate);
-        expect(tooltip).toBe(`${sitePrivate}`);
+    it('Tooltip for sites without description - [C217096]', async () => {
+      const tooltip = await dataTable.getItemNameTooltip(userSitePrivate);
+      expect(tooltip).toBe(`${userSitePrivate}`);
     });
 
-    it('Tooltip for sites with description [C217097]', () => {
-        const tooltip = dataTable.getItemNameTooltip(siteModerated);
-        expect(tooltip).toBe(`${siteDescription}`);
+    it('Tooltip for sites with description - [C217097]', async () => {
+      const tooltip = await dataTable.getItemNameTooltip(userSiteModerated);
+      expect(tooltip).toBe(`${siteDescription}`);
     });
+  });
+
+  describe('Favorite Libraries', () => {
+    beforeEach(async (done) => {
+      await page.goToFavoriteLibrariesAndWait();
+      done();
+    });
+
+    it('has the correct columns - [C289893]', async () => {
+      const expectedColumns = [ 'Thumbnail', 'Name', 'My Role', 'Visibility' ];
+      const actualColumns = await dataTable.getColumnHeadersText();
+
+      expect(actualColumns).toEqual(expectedColumns);
+    });
+
+    it('User can see only his favorite sites - [C289897]', async () => {
+      const sitesCount = await dataTable.countRows();
+
+      expect(sitesCount).toEqual(9, 'Incorrect number of sites displayed');
+      expect(await dataTable.isItemPresent(adminSite6)).toBe(false, `${adminSite6} should not appear`);
+    });
+
+    it('Library visibility is correctly displayed - [C289906]', async () => {
+      const expectedSitesVisibility = {
+        [userSitePrivate]: SITE_VISIBILITY.PRIVATE,
+        [userSiteModerated]: SITE_VISIBILITY.MODERATED,
+        [userSitePublic]: SITE_VISIBILITY.PUBLIC
+      };
+
+      const sitesList = await dataTable.getSitesNameAndVisibility();
+
+      for (const site of Object.keys(expectedSitesVisibility)) {
+        expect(sitesList[site]).toEqual(expectedSitesVisibility[site]);
+      }
+    });
+
+    it('User role is correctly displayed - [C289904]', async () => {
+      const expectedSitesRoles = {
+        [adminSite1]: SITE_ROLES.SITE_CONSUMER.LABEL,
+        [adminSite2]: SITE_ROLES.SITE_CONTRIBUTOR.LABEL,
+        [adminSite3]: SITE_ROLES.SITE_COLLABORATOR.LABEL,
+        [adminSite4]: SITE_ROLES.SITE_MANAGER.LABEL
+      };
+
+      const sitesList = await dataTable.getSitesNameAndRole();
+
+      for (const site of Object.keys(expectedSitesRoles)) {
+        expect(sitesList[site]).toEqual(expectedSitesRoles[site]);
+      }
+    });
+
+    it('Site ID is displayed when two sites have the same name - [C289896]', async () => {
+      const expectedSites = [
+        `${siteName} (${siteId1})`,
+        `${siteName} (${siteId2})`
+      ];
+      const cells = await dataTable.getCellsContainingName(siteName);
+      const expectedJSON = JSON.stringify(expectedSites.sort());
+      const actualJSON = JSON.stringify(cells.sort());
+      expect(actualJSON).toEqual(expectedJSON);
+    });
+
+    it('Tooltip for sites without description - [C289894]', async () => {
+      const tooltip = await dataTable.getItemNameTooltip(userSitePrivate);
+      expect(tooltip).toBe(`${userSitePrivate}`);
+    });
+
+    it('Tooltip for sites with description - [C289895]', async () => {
+      const tooltip = await dataTable.getItemNameTooltip(userSiteModerated);
+      expect(tooltip).toBe(`${siteDescription}`);
+    });
+  });
 });

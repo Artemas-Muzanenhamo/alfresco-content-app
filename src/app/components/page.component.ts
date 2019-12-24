@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,115 +23,127 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DocumentListComponent, ShareDataRow } from '@alfresco/adf-content-services';
-import { FileUploadErrorEvent } from '@alfresco/adf-core';
+import {
+  DocumentListComponent,
+  ShareDataRow
+} from '@alfresco/adf-content-services';
+import { ContentActionRef, SelectionState } from '@alfresco/adf-extensions';
 import { OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { MinimalNodeEntity, MinimalNodeEntryEntity } from 'alfresco-js-api';
+import { MinimalNodeEntity, MinimalNodeEntryEntity } from '@alfresco/js-api';
+import { Observable, Subject, Subscription } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Subject, Subscription } from 'rxjs/Rx';
-import { SnackbarErrorAction, ViewNodeAction, SetSelectedNodesAction } from '../store/actions';
-import { appSelection } from '../store/selectors/app.selectors';
-import { AppStore } from '../store/states/app.state';
-import { SelectionState } from '../store/states/selection.state';
+import { AppExtensionService } from '../extensions/extension.service';
+import { ContentManagementService } from '../services/content-management.service';
+import {
+  AppStore,
+  ReloadDocumentListAction,
+  getCurrentFolder,
+  getAppSelection,
+  getDocumentDisplayMode,
+  isInfoDrawerOpened,
+  getSharedUrl,
+  ViewNodeAction,
+  ViewNodeExtras,
+  SetSelectedNodesAction
+} from '@alfresco/aca-shared/store';
+import { isLocked, isLibrary } from '../utils/node.utils';
 
 export abstract class PageComponent implements OnInit, OnDestroy {
+  onDestroy$: Subject<boolean> = new Subject<boolean>();
 
-    onDestroy$: Subject<boolean> = new Subject<boolean>();
+  @ViewChild(DocumentListComponent)
+  documentList: DocumentListComponent;
 
-    @ViewChild(DocumentListComponent)
-    documentList: DocumentListComponent;
+  title = 'Page';
+  infoDrawerOpened$: Observable<boolean>;
+  node: MinimalNodeEntryEntity;
+  selection: SelectionState;
+  documentDisplayMode$: Observable<string>;
+  sharedPreviewUrl$: Observable<string>;
+  actions: Array<ContentActionRef> = [];
+  viewerToolbarActions: Array<ContentActionRef> = [];
+  canUpdateNode = false;
+  canUpload = false;
 
-    title = 'Page';
-    infoDrawerOpened = false;
-    node: MinimalNodeEntryEntity;
-    selection: SelectionState;
+  protected subscriptions: Subscription[] = [];
 
-    protected subscriptions: Subscription[] = [];
+  constructor(
+    protected store: Store<AppStore>,
+    protected extensions: AppExtensionService,
+    protected content: ContentManagementService
+  ) {}
 
-    static isLockedNode(node) {
-        return node.isLocked || (node.properties && node.properties['cm:lockType'] === 'READ_ONLY_LOCK');
+  ngOnInit() {
+    this.sharedPreviewUrl$ = this.store.select(getSharedUrl);
+    this.infoDrawerOpened$ = this.store.select(isInfoDrawerOpened);
+    this.documentDisplayMode$ = this.store.select(getDocumentDisplayMode);
+
+    this.store
+      .select(getAppSelection)
+      .pipe(takeUntil(this.onDestroy$))
+      .subscribe(selection => {
+        this.selection = selection;
+        this.actions = this.extensions.getAllowedToolbarActions();
+        this.viewerToolbarActions = this.extensions.getViewerToolbarActions();
+        this.canUpdateNode =
+          this.selection.count === 1 &&
+          this.content.canUpdateNode(selection.first);
+      });
+
+    this.store
+      .select(getCurrentFolder)
+      .pipe(takeUntil(this.onDestroy$))
+      .subscribe(node => {
+        this.canUpload = node && this.content.canUploadContent(node);
+      });
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
+    this.subscriptions = [];
+
+    this.onDestroy$.next(true);
+    this.onDestroy$.complete();
+  }
+
+  showPreview(node: MinimalNodeEntity, extras?: ViewNodeExtras) {
+    if (node && node.entry) {
+      const id =
+        (<any>node).entry.nodeId || (<any>node).entry.guid || node.entry.id;
+
+      this.store.dispatch(new ViewNodeAction(id, extras));
+    }
+  }
+
+  getParentNodeId(): string {
+    return this.node ? this.node.id : null;
+  }
+
+  imageResolver(row: ShareDataRow): string | null {
+    if (isLocked(row.node)) {
+      return 'assets/images/baseline-lock-24px.svg';
     }
 
-    constructor(protected store: Store<AppStore>) {}
-
-    ngOnInit() {
-        this.store
-            .select(appSelection)
-            .pipe(takeUntil(this.onDestroy$))
-            .subscribe(selection => {
-                this.selection = selection;
-                if (selection.isEmpty) {
-                    this.infoDrawerOpened = false;
-                }
-            });
+    if (isLibrary(row.node)) {
+      return 'assets/images/baseline-library_books-24px.svg';
     }
 
-    ngOnDestroy() {
-        this.subscriptions.forEach(subscription => subscription.unsubscribe());
-        this.subscriptions = [];
+    return null;
+  }
 
-        this.onDestroy$.next(true);
-        this.onDestroy$.complete();
+  reload(selectedNode?: MinimalNodeEntity): void {
+    this.store.dispatch(new ReloadDocumentListAction());
+    if (selectedNode) {
+      this.store.dispatch(new SetSelectedNodesAction([selectedNode]));
     }
+  }
 
-    showPreview(node: MinimalNodeEntity) {
-        if (node && node.entry) {
-            const { id, nodeId, name, isFile, isFolder } = node.entry;
-            const parentId = this.node ? this.node.id : null;
+  trackByActionId(_: number, action: ContentActionRef) {
+    return action.id;
+  }
 
-            this.store.dispatch(new ViewNodeAction({
-                parentId,
-                id: nodeId || id,
-                name,
-                isFile,
-                isFolder
-            }));
-        }
-    }
-
-    getParentNodeId(): string {
-        return this.node ? this.node.id : null;
-    }
-
-    imageResolver(row: ShareDataRow): string | null {
-        const entry: MinimalNodeEntryEntity = row.node.entry;
-
-        if (PageComponent.isLockedNode(entry)) {
-            return 'assets/images/ic_lock_black_24dp_1x.png';
-        }
-        return null;
-    }
-
-    toggleSidebar(event) {
-        if (event) {
-            return;
-        }
-
-        this.infoDrawerOpened = !this.infoDrawerOpened;
-    }
-
-    reload(): void {
-        if (this.documentList) {
-            this.documentList.resetSelection();
-            this.store.dispatch(new SetSelectedNodesAction([]));
-            this.documentList.reload();
-        }
-    }
-
-    onFileUploadedError(error: FileUploadErrorEvent) {
-        let message = 'APP.MESSAGES.UPLOAD.ERROR.GENERIC';
-
-        if (error.error.status === 409) {
-           message = 'APP.MESSAGES.UPLOAD.ERROR.CONFLICT';
-        }
-
-        if (error.error.status === 500) {
-            message = 'APP.MESSAGES.UPLOAD.ERROR.500';
-         }
-
-        const action = new SnackbarErrorAction(message);
-
-        this.store.dispatch(action);
-    }
+  trackById(_: number, obj: { id: string }) {
+    return obj.id;
+  }
 }

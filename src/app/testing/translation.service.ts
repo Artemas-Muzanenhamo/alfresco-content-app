@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -25,19 +25,25 @@
 
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { Observable } from 'rxjs/Observable';
+import { Observable, of } from 'rxjs';
 
 @Injectable()
 export class TranslateServiceMock extends TranslateService {
-    constructor() {
-        super(null, null, null, null, null);
-    }
+  constructor() {
+    super(null, null, null, null, null);
+  }
 
-    get(key: string | Array<string>, interpolateParams?: Object): Observable<string | any> {
-        return Observable.of(key);
-    }
+  get(
+    key: string | Array<string> /*,
+    interpolateParams?: Object*/
+  ): Observable<string | any> {
+    return of(key);
+  }
 
-    instant(key: string | Array<string>, interpolateParams?: Object): string | any {
-        return key;
-    }
+  instant(
+    key: string | Array<string> /*,
+    interpolateParams?: Object*/
+  ): string | any {
+    return key;
+  }
 }

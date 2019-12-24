@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,51 +23,69 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Subscription } from 'rxjs/Rx';
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
-import { MinimalNodeEntryEntity } from 'alfresco-js-api';
-import { AppConfigService } from '@alfresco/adf-core';
-
-
-import { BrowsingFilesService } from '../../common/services/browsing-files.service';
-import { NodePermissionService } from '../../common/services/node-permission.service';
+import {
+  Component,
+  ContentChild,
+  Input,
+  TemplateRef,
+  OnInit,
+  ViewEncapsulation,
+  OnDestroy
+} from '@angular/core';
+import { CollapsedTemplateDirective } from './directives/collapsed-template.directive';
+import { ExpandedTemplateDirective } from './directives/expanded-template.directive';
+import { AppExtensionService } from '../../extensions/extension.service';
+import { NavBarGroupRef } from '@alfresco/adf-extensions';
+import { Store } from '@ngrx/store';
+import { AppStore, getSideNavState } from '@alfresco/aca-shared/store';
+import { Subject } from 'rxjs';
+import { takeUntil, distinctUntilChanged, debounceTime } from 'rxjs/operators';
 
 @Component({
-    selector: 'app-sidenav',
-    templateUrl: './sidenav.component.html',
-    styleUrls: ['./sidenav.component.scss']
+  selector: 'app-sidenav',
+  templateUrl: './sidenav.component.html',
+  styleUrls: ['./sidenav.component.scss'],
+  encapsulation: ViewEncapsulation.None,
+  host: { class: 'app-sidenav' }
 })
 export class SidenavComponent implements OnInit, OnDestroy {
-    @Input() showLabel: boolean;
+  @Input() mode: 'collapsed' | 'expanded' = 'expanded';
 
-    node: MinimalNodeEntryEntity = null;
-    navigation = [];
+  @ContentChild(ExpandedTemplateDirective, { read: TemplateRef })
+  expandedTemplate;
 
-    private subscriptions: Subscription[] = [];
+  @ContentChild(CollapsedTemplateDirective, { read: TemplateRef })
+  collapsedTemplate;
 
-    constructor(
-        private browsingFilesService: BrowsingFilesService,
-        private appConfig: AppConfigService,
-        public permission: NodePermissionService
-    ) {}
+  groups: Array<NavBarGroupRef> = [];
+  private onDestroy$: Subject<boolean> = new Subject<boolean>();
 
-    ngOnInit() {
-        this.navigation = this.buildMenu();
+  constructor(
+    private store: Store<AppStore>,
+    private extensions: AppExtensionService
+  ) {}
 
-        this.subscriptions.concat([
-            this.browsingFilesService.onChangeParent
-                .subscribe((node: MinimalNodeEntryEntity) => this.node = node)
-        ]);
-    }
+  ngOnInit() {
+    this.store
+      .select(getSideNavState)
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.onDestroy$)
+      )
+      .subscribe(() => {
+        this.groups = this.extensions.getApplicationNavigation(
+          this.extensions.navbar
+        );
+      });
+  }
 
-    ngOnDestroy() {
-        this.subscriptions.forEach(s => s.unsubscribe());
-    }
+  trackById(_: number, obj: { id: string }) {
+    return obj.id;
+  }
 
-    private buildMenu() {
-        const schema = this.appConfig.get('navigation');
-        const data = Array.isArray(schema) ? { main: schema } : schema;
-
-        return Object.keys(data).map((key) => data[key]);
-    }
+  ngOnDestroy() {
+    this.onDestroy$.next(true);
+    this.onDestroy$.complete();
+  }
 }

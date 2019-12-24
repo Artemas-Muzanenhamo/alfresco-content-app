@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -33,6 +33,7 @@ export class NodeBodyCreate {
         public name: string,
         public nodeType: string,
         public relativePath: string = '/',
+        public aspectNames?: string[], // workaround for REPO-4772
         public properties?: any[]
     ) {}
 }

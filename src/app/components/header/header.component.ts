@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,32 +23,57 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Component, Output, EventEmitter, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  ViewEncapsulation,
+  Output,
+  EventEmitter,
+  OnInit,
+  Input
+} from '@angular/core';
 import { Store } from '@ngrx/store';
-import { Observable } from 'rxjs/Rx';
-import { AppStore } from '../../store/states/app.state';
-import { selectHeaderColor, selectAppName, selectLogoPath } from '../../store/selectors/app.selectors';
+import { Observable } from 'rxjs';
+import { ContentActionRef } from '@alfresco/adf-extensions';
+import { AppExtensionService } from '../../extensions/extension.service';
+import {
+  AppStore,
+  getHeaderColor,
+  getAppName,
+  getLogoPath
+} from '@alfresco/aca-shared/store';
 
 @Component({
-    selector: 'aca-header',
-    templateUrl: './header.component.html',
-    encapsulation: ViewEncapsulation.None,
-    host: { class: 'aca-header' }
+  selector: 'app-header',
+  templateUrl: 'header.component.html',
+  encapsulation: ViewEncapsulation.None,
+  host: { class: 'app-header' }
 })
-export class HeaderComponent {
-    @Output() menu: EventEmitter<any> = new EventEmitter<any>();
+export class AppHeaderComponent implements OnInit {
+  @Output()
+  toggleClicked = new EventEmitter();
 
-    appName$: Observable<string>;
-    headerColor$: Observable<string>;
-    logo$: Observable<string>;
+  @Input() expandedSidenav = true;
 
-    constructor(store: Store<AppStore>) {
-        this.headerColor$ = store.select(selectHeaderColor);
-        this.appName$ = store.select(selectAppName);
-        this.logo$ = store.select(selectLogoPath);
-    }
+  appName$: Observable<string>;
+  headerColor$: Observable<string>;
+  logo$: Observable<string>;
 
-    toggleMenu() {
-        this.menu.emit();
-    }
+  actions: Array<ContentActionRef> = [];
+
+  constructor(
+    store: Store<AppStore>,
+    private appExtensions: AppExtensionService
+  ) {
+    this.headerColor$ = store.select(getHeaderColor);
+    this.appName$ = store.select(getAppName);
+    this.logo$ = store.select(getLogoPath);
+  }
+
+  ngOnInit() {
+    this.actions = this.appExtensions.getHeaderActions();
+  }
+
+  trackByActionId(_: number, action: ContentActionRef) {
+    return action.id;
+  }
 }

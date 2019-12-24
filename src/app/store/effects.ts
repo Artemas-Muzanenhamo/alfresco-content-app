@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,10 +23,12 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
+export * from './effects/app.effects';
 export * from './effects/download.effects';
+export * from './effects/favorite.effects';
 export * from './effects/node.effects';
-export * from './effects/router.effects';
-export * from './effects/snackbar.effects';
 export * from './effects/viewer.effects';
 export * from './effects/search.effects';
 export * from './effects/library.effects';
+export * from './effects/upload.effects';
+export * from './effects/upload.effects';

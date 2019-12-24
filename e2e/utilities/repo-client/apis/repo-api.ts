@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,49 +23,42 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { RestClient, RestClientArgs, RestClientResponse } from '../../rest-client/rest-client';
-import { RepoClientAuth, RepoClientConfig } from '../repo-client-models';
+import { browser } from 'protractor';
+import { AlfrescoApi } from '@alfresco/js-api';
+import { RepoClientAuth } from '../repo-client-models';
 
 export abstract class RepoApi {
-    private client: RestClient;
-    private defaults: RepoClientConfig = new RepoClientConfig();
+    alfrescoJsApi = new AlfrescoApi();
 
     constructor(
-        auth: RepoClientAuth = new RepoClientAuth(),
-        private config?: RepoClientConfig
+        private username: string = RepoClientAuth.DEFAULT_USERNAME,
+        private password: string = RepoClientAuth.DEFAULT_PASSWORD
     ) {
-        const { username, password } = auth;
-
-        this.client = new RestClient(username, password);
+        this.alfrescoJsApi.setConfig(browser.params.config);
     }
 
-    private createEndpointUri(endpoint: string, apiDefinition: string = 'alfresco'): string {
-        const { defaults, config } = this;
-        const { host, tenant } = Object.assign(defaults, config);
-
-        return `${host}/alfresco/api/${tenant}/public/${apiDefinition}/versions/1${endpoint}`;
+    apiAuth() {
+        return this.alfrescoJsApi.login(this.username, this.password);
     }
 
-    protected handleError(response: RestClientResponse) {
-        const { request: { method, path, data }, data: error } = response;
-
-        console.log(`ERROR on ${method}\n${path}\n${data}`);
-        console.log(error);
+    getUsername() {
+        return this.username;
     }
 
-    protected get(endpoint: string, args: RestClientArgs = {}, apiDefinition: string = 'alfresco') {
-        return this.client.get(this.createEndpointUri(endpoint, apiDefinition), args);
+    protected handleError(message: string, response: any) {
+      console.log(`\n--- ${message} error :`);
+      if ( response.status && response.response ) {
+        try {
+          console.log('\t>>> Status: ', response.status);
+          console.log('\t>>> Text: ', response.response.text);
+          console.log('\t>>> Method: ', response.response.error.method);
+          console.log('\t>>> Path: ', response.response.error.path);
+        } catch {
+          console.log('\t>>> ', response);
+        }
+      }
+      else console.log('\t>>> ', response);
+
     }
 
-    protected post(endpoint: string, args: RestClientArgs = {}, apiDefinition: string = 'alfresco') {
-        return this.client.post(this.createEndpointUri(endpoint, apiDefinition), args);
-    }
-
-    protected put(endpoint: string, args: RestClientArgs = {}, apiDefinition: string = 'alfresco') {
-        return this.client.put(this.createEndpointUri(endpoint, apiDefinition), args);
-    }
-
-    protected delete(endpoint: string, args: RestClientArgs = {}, apiDefinition: string = 'alfresco') {
-        return this.client.delete(this.createEndpointUri(endpoint, apiDefinition), args);
-    }
 }

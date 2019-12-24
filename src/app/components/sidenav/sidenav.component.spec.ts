@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -25,72 +25,53 @@
 
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TestBed, async, ComponentFixture } from '@angular/core/testing';
-import { AppConfigService } from '@alfresco/adf-core';
-import { BrowsingFilesService } from '../../common/services/browsing-files.service';
 import { SidenavComponent } from './sidenav.component';
-import { EffectsModule } from '@ngrx/effects';
-import { NodeEffects } from '../../store/effects/node.effects';
 import { AppTestingModule } from '../../testing/app-testing.module';
+import { AppExtensionService } from '../../extensions/extension.service';
 
 describe('SidenavComponent', () => {
-    let fixture: ComponentFixture<SidenavComponent>;
-    let component: SidenavComponent;
-    let browsingService: BrowsingFilesService;
-    let appConfig: AppConfigService;
-    let appConfigSpy;
-
-    const navItem = {
-        label: 'some-label',
-        route: {
-            url: '/some-url'
+  let fixture: ComponentFixture<SidenavComponent>;
+  let component: SidenavComponent;
+  let extensionService: AppExtensionService;
+  const navbarMock = <any>[
+    {
+      items: [
+        {
+          route: 'route'
         }
-    };
+      ]
+    }
+  ];
 
-    beforeEach(async(() => {
-        TestBed.configureTestingModule({
-            imports: [
-                AppTestingModule,
-                EffectsModule.forRoot([NodeEffects])
-            ],
-            declarations: [
-                SidenavComponent
-            ],
-            schemas: [ NO_ERRORS_SCHEMA ]
-        })
-        .compileComponents()
-        .then(() => {
-            browsingService = TestBed.get(BrowsingFilesService);
-            appConfig = TestBed.get(AppConfigService);
+  beforeEach(async(() => {
+    TestBed.configureTestingModule({
+      imports: [AppTestingModule],
+      providers: [AppExtensionService],
+      declarations: [SidenavComponent],
+      schemas: [NO_ERRORS_SCHEMA]
+    })
+      .compileComponents()
+      .then(() => {
+        fixture = TestBed.createComponent(SidenavComponent);
+        component = fixture.componentInstance;
+        extensionService = TestBed.get(AppExtensionService);
 
-            fixture = TestBed.createComponent(SidenavComponent);
-            component = fixture.componentInstance;
+        extensionService.navbar = navbarMock;
 
-            appConfigSpy = spyOn(appConfig, 'get').and.returnValue([navItem]);
-        });
-    }));
-
-    it('should update node on change', () => {
         fixture.detectChanges();
-        const node: any = { entry: { id: 'someNodeId' } };
+      });
+  }));
 
-        browsingService.onChangeParent.next(<any>node);
-
-        expect(component.node).toBe(node);
-    });
-
-    describe('menu', () => {
-        it('should build menu from array', () => {
-            appConfigSpy.and.returnValue([navItem, navItem]);
-            fixture.detectChanges();
-
-            expect(component.navigation).toEqual([[navItem, navItem]]);
-        });
-
-        it('should build menu from object', () => {
-            appConfigSpy.and.returnValue({ a: [navItem, navItem], b: [navItem, navItem] });
-            fixture.detectChanges();
-
-            expect(component.navigation).toEqual([[navItem, navItem], [navItem, navItem]]);
-        });
-    });
+  it('should set the sidenav data', async(() => {
+    expect(component.groups).toEqual(<any>[
+      {
+        items: [
+          {
+            route: 'route',
+            url: '/route'
+          }
+        ]
+      }
+    ]);
+  }));
 });

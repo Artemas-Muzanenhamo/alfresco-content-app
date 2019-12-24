@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,134 +23,122 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { SITE_VISIBILITY, SITE_ROLES, SIDEBAR_LABELS } from '../../configs';
-import { LoginPage, LogoutPage, BrowsingPage } from '../../pages/pages';
+import { SITE_VISIBILITY, SITE_ROLES } from '../../configs';
+import { LoginPage, BrowsingPage } from '../../pages/pages';
 import { Utils } from '../../utilities/utils';
 import { RepoClient } from '../../utilities/repo-client/repo-client';
 
 describe('Favorites', () => {
-    const username = `user-${Utils.random()}`;
-    const password = username;
+  const username = `user-${Utils.random()}`;
 
-    const siteName = `site-${Utils.random()}`;
-    const folderName = `folder-${Utils.random()}`;
-    const fileName1 = `file1-${Utils.random()}.txt`;
-    const fileName2 = `file2-${Utils.random()}.txt`;
-    const fileName3 = `file3-${Utils.random()}.txt`; let file3Id;
-    const fileName4 = `file4-${Utils.random()}.txt`; let file4Id;
+  const siteName = `site-${Utils.random()}`;
+  const favFolderName = `favFolder-${Utils.random()}`;
+  const parentFolder = `parent-${Utils.random()}`;
+  const fileName1 = `file1-${Utils.random()}.txt`;
+  const fileName2 = `file2-${Utils.random()}.txt`;
+  const fileName3 = `file3-${Utils.random()}.txt`;
+  const fileName4 = `file4-${Utils.random()}.txt`;
 
-    const apis = {
-        admin: new RepoClient(),
-        user: new RepoClient(username, password)
-    };
+  const apis = {
+    admin: new RepoClient(),
+    user: new RepoClient(username, username)
+  };
 
-    const loginPage = new LoginPage();
-    const logoutPage = new LogoutPage();
-    const favoritesPage = new BrowsingPage();
-    const { dataTable } = favoritesPage;
-    const { breadcrumb } = favoritesPage.toolbar;
+  const loginPage = new LoginPage();
+  const page = new BrowsingPage();
+  const { dataTable, breadcrumb } = page;
 
-    beforeAll(done => {
-        apis.admin.people.createUser(username)
+  beforeAll(async (done) => {
+    await apis.admin.people.createUser({ username });
 
-            .then(() => apis.admin.sites.createSite(siteName, SITE_VISIBILITY.PUBLIC))
-            .then(() => apis.admin.sites.addSiteMember(siteName, username, SITE_ROLES.SITE_MANAGER))
-            .then(() => apis.admin.nodes.createFiles([ fileName1 ], `Sites/${siteName}/documentLibrary`)
-                .then(resp => apis.user.favorites.addFavoriteById('file', resp.data.entry.id)))
-            .then(() => apis.user.nodes.createFolders([ folderName ])
-                .then(resp => apis.user.favorites.addFavoriteById('folder', resp.data.entry.id)))
-            .then(() => apis.user.nodes.createFiles([ fileName2 ], folderName)
-                .then(resp => apis.user.favorites.addFavoriteById('file', resp.data.entry.id)))
-            .then(() => apis.user.nodes.createFiles([ fileName3 ], folderName)
-                .then(resp => file3Id = resp.data.entry.id)
-                .then(() => apis.user.favorites.addFavoriteById('file', file3Id))
-                .then(() => apis.user.nodes.deleteNodeById(file3Id, false)))
-            .then(() => apis.user.nodes.createFiles([ fileName4 ], folderName)
-                .then(resp => file4Id = resp.data.entry.id)
-                .then(() => apis.user.favorites.addFavoriteById('file', file4Id))
-                .then(() => apis.user.nodes.deleteNodeById(file4Id, false))
-                .then(() => apis.user.trashcan.restore(file4Id)))
+    await apis.admin.sites.createSite(siteName, SITE_VISIBILITY.PUBLIC);
+    const docLibId = await apis.admin.sites.getDocLibId(siteName);
+    await apis.admin.sites.addSiteMember(siteName, username, SITE_ROLES.SITE_MANAGER.ROLE);
 
-            .then(() => loginPage.loginWith(username))
-            .then(done);
-    });
+    const file1Id = (await apis.admin.nodes.createFile(fileName1, docLibId)).entry.id;
+    const folderId = (await apis.user.nodes.createFolder(favFolderName)).entry.id;
+    const parentId = (await apis.user.nodes.createFolder(parentFolder)).entry.id;
+    const file2Id = (await apis.user.nodes.createFile(fileName2, parentId)).entry.id;
+    const file3Id = (await apis.user.nodes.createFile(fileName3, parentId)).entry.id;
+    const file4Id = (await apis.user.nodes.createFile(fileName4, parentId)).entry.id;
 
-    beforeEach(done => {
-        favoritesPage.sidenav.navigateToLinkByLabel(SIDEBAR_LABELS.FAVORITES)
-            .then(() => dataTable.waitForHeader())
-            .then(done);
-    });
+    await apis.user.favorites.addFavoriteById('file', file1Id);
+    await apis.user.favorites.addFavoriteById('folder', folderId);
+    await apis.user.favorites.addFavoriteById('file', file2Id);
+    await apis.user.favorites.addFavoriteById('file', file3Id);
+    await apis.user.favorites.addFavoriteById('file', file4Id);
+    await apis.user.nodes.deleteNodeById(file3Id, false);
+    await apis.user.nodes.deleteNodeById(file4Id, false);
+    await apis.user.trashcan.restore(file4Id);
 
-    afterAll(done => {
-        Promise.all([
-            apis.admin.sites.deleteSite(siteName),
-            apis.user.nodes.deleteNodes([ folderName ]),
-            apis.admin.trashcan.emptyTrash(),
-            logoutPage.load()
-        ])
-        .then(done);
-    });
+    await loginPage.loginWith(username);
+    done();
+  });
 
-    it('has the correct columns', () => {
-        const labels = [ 'Name', 'Location', 'Size', 'Modified', 'Modified by' ];
-        const elements = labels.map(label => dataTable.getColumnHeaderByLabel(label));
+  beforeEach(async (done) => {
+    await page.clickFavoritesAndWait();
+    done();
+  });
 
-        expect(dataTable.getColumnHeaders().count()).toBe(5 + 1, 'Incorrect number of columns');
+  afterAll(async (done) => {
+    await apis.admin.sites.deleteSite(siteName);
+    await apis.user.nodes.deleteNodes([ favFolderName, parentFolder ]);
+    await apis.user.trashcan.emptyTrash();
+    done();
+  });
 
-        elements.forEach((element, index) => {
-            expect(element.isPresent()).toBe(true, `"${labels[index]}" is missing`);
-        });
-    });
+  it('has the correct columns - [C280482]', async () => {
+    const expectedColumns = [ 'Thumbnail', 'Name', 'Location', 'Size', 'Modified', 'Modified by' ];
+    const actualColumns = await dataTable.getColumnHeadersText();
 
-    it('displays the favorite files and folders [C213226]', () => {
-        expect(dataTable.countRows()).toEqual(4, 'Incorrect number of items displayed');
-        expect(dataTable.getRowName(fileName1).isPresent()).toBe(true, `${fileName1} not displayed`);
-        expect(dataTable.getRowName(fileName2).isPresent()).toBe(true, `${fileName2} not displayed`);
-        expect(dataTable.getRowName(folderName).isPresent()).toBe(true, `${folderName} not displayed`);
-    });
+    expect(actualColumns).toEqual(expectedColumns);
+  });
 
-    it(`file not displayed if it's in the Trashcan [C213228]`, () => {
-        expect(dataTable.getRowName(fileName3).isPresent()).not.toBe(true, `${fileName3} is displayed`);
-    });
+  it('displays the favorite files and folders - [C213226]', async () => {
+    expect(await dataTable.countRows()).toEqual(4, 'Incorrect number of items displayed');
+    expect(await dataTable.isItemPresent(fileName1)).toBe(true, `${fileName1} not displayed`);
+    expect(await dataTable.isItemPresent(fileName2)).toBe(true, `${fileName2} not displayed`);
+    expect(await dataTable.isItemPresent(favFolderName)).toBe(true, `${favFolderName} not displayed`);
+  });
 
-    it(`file is displayed after it is restored from Trashcan [C213229]`, () => {
-        expect(dataTable.getRowName(fileName4).isPresent()).toBe(true, `${fileName4} not displayed`);
-    });
+  it(`deleted favorite file does not appear - [C213228]`, async () => {
+    expect(await dataTable.isItemPresent(fileName3)).not.toBe(true, `${fileName3} is displayed`);
+  });
 
-    it('Location column displays the parent folder of the files [C213231]', () => {
-        expect(dataTable.getItemLocation(fileName1).getText()).toEqual(siteName);
-        expect(dataTable.getItemLocation(fileName2).getText()).toEqual(folderName);
-        expect(dataTable.getItemLocation(folderName).getText()).toEqual('Personal Files');
-    });
+  it(`file is displayed after it is restored from Trashcan - [C213229]`, async () => {
+    expect(await dataTable.isItemPresent(fileName4)).toBe(true, `${fileName4} not displayed`);
+  });
 
-    it('Location column displays a tooltip with the entire path of the file [C213671]', () => {
-        expect(dataTable.getItemLocationTooltip(fileName1)).toEqual(`File Libraries/${siteName}`);
-        expect(dataTable.getItemLocationTooltip(fileName2)).toEqual(`Personal Files/${folderName}`);
-        expect(dataTable.getItemLocationTooltip(folderName)).toEqual('Personal Files');
-    });
+  it('Location column displays the parent folder of the files - [C213231]', async () => {
+    expect(await dataTable.getItemLocation(fileName1)).toEqual(siteName);
+    expect(await dataTable.getItemLocation(fileName2)).toEqual(parentFolder);
+    expect(await dataTable.getItemLocation(favFolderName)).toEqual('Personal Files');
+  });
 
-    it('Location column redirect - item in user Home [C213650] [C260968]', () => {
-        dataTable.clickItemLocation(folderName)
-            .then(() => expect(breadcrumb.getAllItems()).toEqual([ 'Personal Files' ]));
-    });
+  it('Location column displays a tooltip with the entire path of the file - [C213671]', async () => {
+    expect(await dataTable.getItemLocationTooltip(fileName1)).toEqual(`File Libraries/${siteName}`);
+    expect(await dataTable.getItemLocationTooltip(fileName2)).toEqual(`Personal Files/${parentFolder}`);
+    expect(await dataTable.getItemLocationTooltip(favFolderName)).toEqual('Personal Files');
+  });
 
-    it('Location column redirect - file in folder [C213650] [C260968]', () => {
-        dataTable.clickItemLocation(fileName2)
-            .then(() => expect(breadcrumb.getAllItems()).toEqual([ 'Personal Files', folderName ]));
-    });
+  it('Location column redirect - item in user Home - [C213650]', async () => {
+    await dataTable.clickItemLocation(favFolderName);
+    expect(await breadcrumb.getAllItems()).toEqual([ 'Personal Files' ]);
+  });
 
-    it('Location column redirect - file in site [C213650] [C260969]', () => {
-        dataTable.clickItemLocation(fileName1)
-            .then(() => expect(breadcrumb.getAllItems()).toEqual([ 'File Libraries', siteName ]));
-    });
+  it('Location column redirect - file in folder - [C280484]', async () => {
+    await dataTable.clickItemLocation(fileName2);
+    expect(await breadcrumb.getAllItems()).toEqual([ 'Personal Files', parentFolder ]);
+  });
 
-    it('Navigate into folder from Favorites [C213230]', () => {
-        dataTable.doubleClickOnItemName(folderName)
-            .then(() => dataTable.waitForHeader())
-            .then(() => breadcrumb.getCurrentItemName())
-            .then(name => {
-                expect(name).toBe(folderName);
-            });
-    });
+  it('Location column redirect - file in site - [C280485]', async () => {
+    await dataTable.clickItemLocation(fileName1);
+    expect(await breadcrumb.getAllItems()).toEqual([ 'My Libraries', siteName ]);
+  });
 
+  it('Navigate into folder from Favorites - [C213230]', async () => {
+    await dataTable.doubleClickOnRowByName(favFolderName);
+    await dataTable.waitForEmptyState();
+    expect(await breadcrumb.getCurrentItemName()).toBe(favFolderName);
+  });
 });

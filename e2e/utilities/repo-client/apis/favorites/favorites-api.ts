@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,96 +23,151 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { promise } from 'protractor';
 import { RepoApi } from '../repo-api';
-import { NodesApi } from '../nodes/nodes-api';
 import { RepoClient } from './../../repo-client';
 import { Utils } from '../../../../utilities/utils';
+import { FavoritesApi as AdfFavoritesApi, SitesApi as AdfSiteApi, FavoriteEntry } from '@alfresco/js-api';
 
 export class FavoritesApi extends RepoApi {
+  favoritesApi = new AdfFavoritesApi(this.alfrescoJsApi);
+  sitesApi = new AdfSiteApi(this.alfrescoJsApi);
 
-    addFavorite(api: RepoClient, nodeType: string, name: string): Promise<any> {
-        return api.nodes.getNodeByPath(name)
-            .then((response) => {
-                const { id } = response.data.entry;
-                return ([{
-                    target: {
-                        [nodeType]: {
-                            guid: id
-                        }
-                    }
-                }]);
-            })
-            .then((data) => {
-                return this.post(`/people/-me-/favorites`, { data });
-            })
-            .catch(this.handleError);
+  constructor(username?, password?) {
+    super(username, password);
+  }
+
+  async addFavorite(api: RepoClient, nodeType: string, name: string) {
+    try {
+      const nodeId = (await api.nodes.getNodeByPath(name)).entry.id;
+      const data = {
+          target: {
+              [nodeType]: {
+                  guid: nodeId
+              }
+          }
+      };
+      return await this.favoritesApi.createFavorite('-me-', data);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.addFavorite.name}`, error);
+      return null;
     }
+  }
 
-    addFavoriteById(nodeType: 'file' | 'folder', id: string): Promise<any> {
-        const data = [{
-            target: {
-                [nodeType]: {
-                    guid: id
-                }
-            }
-        }];
-        return this
-            .post(`/people/-me-/favorites`, { data })
-            .catch(this.handleError);
+  async addFavoriteById(nodeType: 'file' | 'folder' | 'site', id: string): Promise<FavoriteEntry|null> {
+    let guid;
+    try {
+      await this.apiAuth();
+      if ( nodeType === 'site' ) {
+        guid = (await this.sitesApi.getSite(id)).entry.guid;
+      } else {
+        guid = id;
+      }
+      const data = {
+        target: {
+          [nodeType]: {
+            guid: guid
+          }
+        }
+      };
+      return await this.favoritesApi.createFavorite('-me-', data);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.addFavoriteById.name}`, error);
+      return null;
     }
+  }
 
-    addFavoritesByIds(nodeType: 'file' | 'folder', ids: string[]): Promise<any[]> {
-        return ids.reduce((previous, current) => (
-            previous.then(() => this.addFavoriteById(nodeType, current))
-        ), Promise.resolve());
+  async addFavoritesByIds(nodeType: 'file' | 'folder' | 'site', ids: string[]) {
+    try {
+      return await ids.reduce(async (previous, current) => {
+        await previous;
+        await this.addFavoriteById(nodeType, current);
+      }, Promise.resolve());
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.addFavoritesByIds.name}`, error);
     }
+  }
 
-    getFavorites(): Promise<any> {
-        return this
-            .get('/people/-me-/favorites')
-            .catch(this.handleError);
+  async getFavorites() {
+    try {
+      await this.apiAuth();
+      return await this.favoritesApi.listFavorites(this.getUsername());
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.getFavorites.name}`, error);
+      return null;
     }
+  }
 
-    getFavoriteById(nodeId: string): Promise<any> {
-        return this
-            .get(`/people/-me-/favorites/${nodeId}`)
-            .catch(this.handleError);
+  async getFavoriteById(nodeId: string) {
+    try {
+      await this.apiAuth();
+      return await this.favoritesApi.getFavorite('-me-', nodeId);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.getFavoriteById.name}`, error);
+      return null;
     }
+  }
 
-    isFavorite(nodeId: string) {
-        return this.getFavorites()
-            .then(resp => JSON.stringify(resp.data.list.entries).includes(nodeId));
+  async isFavorite(nodeId: string) {
+    try {
+      return JSON.stringify((await this.getFavorites()).list.entries).includes(nodeId);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.isFavorite.name}`, error);
+      return null;
     }
+  }
 
-    removeFavorite(api: RepoClient, nodeType: string, name: string): Promise<any> {
-        return api.nodes.getNodeByPath(name)
-            .then((response) => {
-                const { id } = response.data.entry;
-                return this.delete(`/people/-me-/favorites/${id}`);
-            })
-            .catch(this.handleError);
+  async isFavoriteWithRetry(nodeId: string, data: { expect: boolean }) {
+    let isFavorite: boolean;
+    try {
+      const favorite = async () => {
+        isFavorite = await this.isFavorite(nodeId);
+        if ( isFavorite !== data.expect ) {
+          return Promise.reject(isFavorite);
+        } else {
+          return Promise.resolve(isFavorite);
+        }
+      };
+      return await Utils.retryCall(favorite);
+    } catch (error) {
+      // this.handleError(`${this.constructor.name} ${this.isFavoriteWithRetry.name}`, error);
     }
+    return isFavorite;
+  }
 
-    removeFavoriteById(nodeId: string) {
-        return this
-            .delete(`/people/-me-/favorites/${nodeId}`)
-            .catch(this.handleError);
+  async removeFavoriteById(nodeId: string) {
+    try {
+      await this.apiAuth();
+      return await this.favoritesApi.deleteFavorite('-me-', nodeId);
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.removeFavoriteById.name}`, error);
     }
+  }
 
-    waitForApi(data) {
-        const favoriteFiles = () => {
-            return this.getFavorites()
-                .then(response => response.data.list.pagination.totalItems)
-                .then(totalItems => {
-                    if ( totalItems < data.expect) {
-                        return Promise.reject(totalItems);
-                    } else {
-                        return Promise.resolve(totalItems);
-                    }
-                });
-        };
-
-        return Utils.retryCall(favoriteFiles);
+  async removeFavoritesByIds(ids: string[]) {
+    try {
+      return await ids.reduce(async (previous, current) => {
+        await previous;
+        await this.removeFavoriteById(current);
+      }, Promise.resolve());
+    } catch (error) {
+      this.handleError(`${this.constructor.name} ${this.removeFavoritesByIds.name}`, error);
     }
+  }
+
+  async waitForApi(data: { expect: number }) {
+    try {
+      const favoriteFiles = async () => {
+        const totalItems = (await this.getFavorites()).list.pagination.totalItems;
+        if ( totalItems !== data.expect) {
+            return Promise.reject(totalItems);
+        } else {
+            return Promise.resolve(totalItems);
+        }
+      };
+      return await Utils.retryCall(favoriteFiles);
+    } catch (error) {
+      console.log(`${this.constructor.name} ${this.waitForApi.name} catch: `);
+      console.log(`\tExpected: ${data.expect} items, but found ${error}`);
+    }
+  }
 }

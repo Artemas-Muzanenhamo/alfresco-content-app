@@ -1,86 +1,84 @@
-<div class="inner-layout">
-    <div class="inner-layout__header">
-        <adf-breadcrumb root="APP.BROWSE.LIBRARIES.TITLE">
-        </adf-breadcrumb>
-        <adf-toolbar class="inline" *ngIf="!selection.isEmpty">
-            <ng-container *ifExperimental="'libraries'">
-                <button
-                    color="primary"
-                    mat-icon-button
-                    title="{{ 'APP.ACTIONS.MORE' | translate }}"
-                    [matMenuTriggerFor]="actionsMenu">
-                    <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #actionsMenu="matMenu" [overlapTrigger]="false">
-                    <button
-                        mat-menu-item
-                        (click)="deleteLibrary(selection.first)">
-                        <mat-icon>delete</mat-icon>
-                        <span>{{ 'APP.ACTIONS.DELETE' | translate }}</span>
-                    </button>
-                </mat-menu>
+<aca-page-layout>
+  <aca-page-layout-header>
+    <adf-breadcrumb root="APP.BROWSE.LIBRARIES.MENU.MY_LIBRARIES.TITLE">
+    </adf-breadcrumb>
+
+    <adf-toolbar class="adf-toolbar--inline">
+      <ng-container *ngFor="let entry of actions; trackBy: trackByActionId">
+        <aca-toolbar-action [actionRef]="entry"></aca-toolbar-action>
+      </ng-container>
+    </adf-toolbar>
+  </aca-page-layout-header>
+
+  <aca-page-layout-content>
+    <div class="main-content">
+      <adf-document-list
+        #documentList
+        acaDocumentList
+        acaContextActions
+        [display]="documentDisplayMode$ | async"
+        currentFolderId="-mysites-"
+        selectionMode="single"
+        [navigate]="false"
+        [sorting]="['title', 'asc']"
+        [imageResolver]="imageResolver"
+        (node-dblclick)="navigateTo($event.detail?.node)"
+        (name-click)="navigateTo($event.detail?.node)"
+      >
+        <adf-custom-empty-content-template>
+          <adf-empty-content
+            icon="library_books"
+            [title]="'APP.BROWSE.LIBRARIES.EMPTY_STATE.FILE_LIBRARIES.TITLE'"
+            subtitle="APP.BROWSE.LIBRARIES.EMPTY_STATE.FILE_LIBRARIES.TEXT"
+          >
+          </adf-empty-content>
+        </adf-custom-empty-content-template>
+
+        <data-columns>
+          <ng-container *ngFor="let column of columns; trackBy: trackById">
+            <ng-container
+              *ngIf="column.template && !(column.desktopOnly && isSmallScreen)"
+            >
+              <data-column
+                [key]="column.key"
+                [title]="column.title"
+                [type]="column.type"
+                [format]="column.format"
+                [class]="column.class"
+                [sortable]="column.sortable"
+              >
+                <ng-template let-context>
+                  <adf-dynamic-column
+                    [id]="column.template"
+                    [context]="context"
+                  >
+                  </adf-dynamic-column>
+                </ng-template>
+              </data-column>
             </ng-container>
-        </adf-toolbar>
+
+            <ng-container
+              *ngIf="!column.template && !(column.desktopOnly && isSmallScreen)"
+            >
+              <data-column
+                [key]="column.key"
+                [title]="column.title"
+                [type]="column.type"
+                [format]="column.format"
+                [class]="column.class"
+                [sortable]="column.sortable"
+              >
+              </data-column>
+            </ng-container>
+          </ng-container>
+        </data-columns>
+      </adf-document-list>
+
+      <adf-pagination acaPagination [target]="documentList"> </adf-pagination>
     </div>
 
-    <div class="inner-layout__content">
-        <div class="inner-layout__panel">
-            <adf-document-list acaDocumentList #documentList
-                currentFolderId="-mysites-"
-                selectionMode="single"
-                [navigate]="false"
-                [sorting]="[ 'title', 'asc' ]"
-                (node-dblclick)="onNodeDoubleClick($event)">
-
-                <empty-folder-content>
-                    <ng-template>
-                        <adf-empty-content
-                            icon="group_work"
-                            [title]="'APP.BROWSE.LIBRARIES.EMPTY_STATE.TITLE'"
-                            subtitle="APP.BROWSE.LIBRARIES.EMPTY_STATE.TEXT">
-                        </adf-empty-content>
-                    </ng-template>
-                </empty-folder-content>
-
-                <data-columns>
-                    <data-column
-                        key="$thumbnail"
-                        type="image"
-                        [sortable]="false"
-                        class="image-table-cell">
-                    </data-column>
-
-                    <data-column
-                        class="adf-data-table-cell--ellipsis__name"
-                        key="title"
-                        title="APP.DOCUMENT_LIST.COLUMNS.TITLE">
-                        <ng-template let-context>
-                            <span class="adf-datatable-cell" title="{{ makeLibraryTooltip(context.row.obj.entry) }}">
-                                {{ makeLibraryTitle(context.row.obj.entry) }}
-                            </span>
-                        </ng-template>
-                    </data-column>
-
-                    <data-column
-                        key="visibility"
-                        title="APP.DOCUMENT_LIST.COLUMNS.STATUS">
-                        <ng-template let-value="value">
-                            <span *ngIf="(value == 'PUBLIC')" title="{{ 'APP.SITES_VISIBILITY.PUBLIC' | translate }}">
-                                {{ 'APP.SITES_VISIBILITY.PUBLIC' | translate }}
-                            </span>
-                            <span *ngIf="(value == 'PRIVATE')" title="{{ 'APP.SITES_VISIBILITY.PRIVATE' | translate }}">
-                                {{ 'APP.SITES_VISIBILITY.PRIVATE' | translate }}
-                            </span>
-                            <span *ngIf="(value == 'MODERATED')" title="{{ 'APP.SITES_VISIBILITY.MODERATED' | translate }}">
-                                {{ 'APP.SITES_VISIBILITY.MODERATED' | translate }}
-                            </span>
-                        </ng-template>
-                    </data-column>
-                </data-columns>
-            </adf-document-list>
-
-            <adf-pagination acaPagination [target]="documentList">
-            </adf-pagination>
-        </div>
+    <div class="sidebar" *ngIf="infoDrawerOpened$ | async">
+      <aca-info-drawer [node]="selection.library"></aca-info-drawer>
     </div>
-</div>
+  </aca-page-layout-content>
+</aca-page-layout>

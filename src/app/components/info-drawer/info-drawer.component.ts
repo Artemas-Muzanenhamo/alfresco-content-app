@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,89 +23,74 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { MinimalNodeEntity, MinimalNodeEntryEntity } from 'alfresco-js-api';
-import { NodePermissionService } from '../../common/services/node-permission.service';
-import { ContentApiService } from '../../services/content-api.service';
+import { Component, Input, OnChanges, OnInit, OnDestroy } from '@angular/core';
+import {
+  MinimalNodeEntity,
+  MinimalNodeEntryEntity,
+  SiteEntry
+} from '@alfresco/js-api';
+import { ContentApiService } from '@alfresco/aca-shared';
+import { AppExtensionService } from '../../extensions/extension.service';
+import { SidebarTabRef } from '@alfresco/adf-extensions';
+import { Store } from '@ngrx/store';
+import { SetInfoDrawerStateAction } from '@alfresco/aca-shared/store';
 
 @Component({
-    selector: 'aca-info-drawer',
-    templateUrl: './info-drawer.component.html'
+  selector: 'aca-info-drawer',
+  templateUrl: './info-drawer.component.html'
 })
-export class InfoDrawerComponent implements OnChanges {
-    @Input() nodeId: string;
+export class InfoDrawerComponent implements OnChanges, OnInit, OnDestroy {
+  @Input()
+  nodeId: string;
+  @Input()
+  node: MinimalNodeEntity;
 
-    @Input() node: MinimalNodeEntity;
+  isLoading = false;
+  displayNode: MinimalNodeEntryEntity | SiteEntry;
+  tabs: Array<SidebarTabRef> = [];
 
-    isLoading = false;
-    displayNode: MinimalNodeEntryEntity;
+  constructor(
+    private store: Store<any>,
+    private contentApi: ContentApiService,
+    private extensions: AppExtensionService
+  ) {}
 
-    canUpdateNode(): boolean {
-        if (this.displayNode) {
-            return this.permission.check(this.displayNode, ['update']);
-        }
+  ngOnInit() {
+    this.tabs = this.extensions.getSidebarTabs();
+  }
 
-        return false;
+  ngOnDestroy() {
+    this.store.dispatch(new SetInfoDrawerStateAction(false));
+  }
+
+  ngOnChanges() {
+    if (this.node) {
+      if (this.node['isLibrary']) {
+        return this.setDisplayNode(this.node);
+      }
+
+      const entry: any = this.node.entry;
+
+      const id = entry.nodeId || entry.id;
+      return this.loadNodeInfo(id);
     }
+  }
 
-    get isFileSelected(): boolean {
-        if (this.node && this.node.entry) {
-            // workaround for shared files type.
-            if (this.node.entry.nodeId) {
-                return true;
-            } else {
-                return this.node.entry.isFile;
-            }
-        }
-        return false;
+  private loadNodeInfo(nodeId: string) {
+    if (nodeId) {
+      this.isLoading = true;
+
+      this.contentApi.getNodeInfo(nodeId).subscribe(
+        entity => {
+          this.setDisplayNode(entity);
+          this.isLoading = false;
+        },
+        () => (this.isLoading = false)
+      );
     }
+  }
 
-    constructor(
-        public permission: NodePermissionService,
-        private contentApi: ContentApiService
-    ) {}
-
-    ngOnChanges(changes: SimpleChanges) {
-        if (this.node) {
-            const entry = this.node.entry;
-            if (entry.nodeId) {
-                this.loadNodeInfo(entry.nodeId);
-            } else if ((<any>entry).guid) {
-                // workaround for Favorite files
-                this.loadNodeInfo(entry.id);
-            } else {
-                // workaround Recent
-                if (this.isTypeImage(entry) && !this.hasAspectNames(entry)) {
-                    this.loadNodeInfo(this.node.entry.id);
-                } else {
-                    this.displayNode = this.node.entry;
-                }
-            }
-        }
-    }
-
-    private hasAspectNames(entry: MinimalNodeEntryEntity): boolean {
-        return entry.aspectNames && entry.aspectNames.includes('exif:exif');
-    }
-
-    private isTypeImage(entry: MinimalNodeEntryEntity): boolean {
-        if (entry && entry.content && entry.content.mimeType) {
-            return entry.content.mimeType.includes('image/');
-        }
-        return false;
-    }
-
-    private loadNodeInfo(nodeId: string) {
-        if (nodeId) {
-            this.isLoading = true;
-
-            this.contentApi.getNodeInfo(nodeId).subscribe(
-                entity => {
-                    this.displayNode = entity;
-                    this.isLoading = false;
-                },
-                () => this.isLoading = false
-            );
-        }
-    }
+  private setDisplayNode(node: any) {
+    this.displayNode = node;
+  }
 }

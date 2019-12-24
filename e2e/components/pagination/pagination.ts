@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,76 +23,141 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ElementFinder, promise, by } from 'protractor';
+import { ElementFinder, by, browser, ExpectedConditions as EC } from 'protractor';
+import { BROWSER_WAIT_TIMEOUT } from '../../configs';
 import { Menu } from '../menu/menu';
 import { Component } from '../component';
 
 export class Pagination extends Component {
-    private static selectors = {
-        root: 'adf-pagination',
-        range: '.adf-pagination__range',
-        maxItems: '.adf-pagination__max-items',
-        currentPage: '.adf-pagination__current-page',
-        totalPages: '.adf-pagination__total-pages',
+  private static selectors = {
+    root: 'adf-pagination',
+    range: '.adf-pagination__range',
+    maxItems: '.adf-pagination__max-items',
+    currentPage: '.adf-pagination__current-page',
+    totalPages: '.adf-pagination__total-pages',
 
-        previousButton: '.adf-pagination__previous-button',
-        nextButton: '.adf-pagination__next-button',
-        maxItemsButton: '.adf-pagination__max-items + button[mat-icon-button]',
-        pagesButton: '.adf-pagination__current-page + button[mat-icon-button]'
-    };
+    previousButton: '.adf-pagination__previous-button',
+    nextButton: '.adf-pagination__next-button',
+    maxItemsButton: '.adf-pagination__max-items + button[mat-icon-button]',
+    pagesButton: '.adf-pagination__current-page + button[mat-icon-button]'
+  };
 
-    range: ElementFinder = this.component.element(by.css(Pagination.selectors.range));
-    maxItems: ElementFinder = this.component.element(by.css(Pagination.selectors.maxItems));
-    currentPage: ElementFinder = this.component.element(by.css(Pagination.selectors.currentPage));
-    totalPages: ElementFinder = this.component.element(by.css(Pagination.selectors.totalPages));
-    previousButton: ElementFinder = this.component.element(by.css(Pagination.selectors.previousButton));
-    nextButton: ElementFinder = this.component.element(by.css(Pagination.selectors.nextButton));
-    maxItemsButton: ElementFinder = this.component.element(by.css(Pagination.selectors.maxItemsButton));
-    pagesButton: ElementFinder = this.component.element(by.css(Pagination.selectors.pagesButton));
+  range: ElementFinder = this.component.element(by.css(Pagination.selectors.range));
+  maxItems: ElementFinder = this.component.element(by.css(Pagination.selectors.maxItems));
+  currentPage: ElementFinder = this.component.element(by.css(Pagination.selectors.currentPage));
+  totalPages: ElementFinder = this.component.element(by.css(Pagination.selectors.totalPages));
+  previousButton: ElementFinder = this.component.element(by.css(Pagination.selectors.previousButton));
+  nextButton: ElementFinder = this.component.element(by.css(Pagination.selectors.nextButton));
+  maxItemsButton: ElementFinder = this.component.element(by.css(Pagination.selectors.maxItemsButton));
+  pagesButton: ElementFinder = this.component.element(by.css(Pagination.selectors.pagesButton));
 
-    menu: Menu = new Menu();
+  menu: Menu = new Menu();
 
-    constructor(ancestor?: ElementFinder) {
-        super(Pagination.selectors.root, ancestor);
+  constructor(ancestor?: ElementFinder) {
+    super(Pagination.selectors.root, ancestor);
+  }
+
+  async openMaxItemsMenu() {
+    const { menu, maxItemsButton } = this;
+
+    try {
+      await browser.wait(EC.elementToBeClickable(maxItemsButton), BROWSER_WAIT_TIMEOUT, 'timeout waiting for maxItemsButton to be clickable');
+      await maxItemsButton.click();
+      await menu.waitForMenuToOpen();
+    } catch (error) {
+      console.log('____ open max items catch ___', error);
     }
+  }
 
-    openMaxItemsMenu(): promise.Promise<Menu> {
-        const { menu, maxItemsButton } = this;
+  async openCurrentPageMenu() {
+    const { menu, pagesButton } = this;
 
-        return maxItemsButton.click()
-            .then(() => menu.waitForMenuToOpen())
-            .then(() => menu);
+    try {
+      await browser.wait(EC.elementToBeClickable(pagesButton), BROWSER_WAIT_TIMEOUT, 'timeout waiting for pagesButton to be clickable');
+      await pagesButton.click();
+      await menu.waitForMenuToOpen();
+    } catch (error) {
+      console.log('____ open current page menu ___', error);
     }
+  }
 
-    openCurrentPageMenu(): promise.Promise<Menu> {
-        const { menu, pagesButton } = this;
-
-        return pagesButton.click()
-            .then(() => menu.waitForMenuToOpen())
-            .then(() => menu);
+  async resetToDefaultPageSize() {
+    try {
+      await this.openMaxItemsMenu();
+      await this.menu.clickNthItem(1);
+      await this.menu.waitForMenuToClose();
+    } catch (error) {
+      console.log('___ reset to default page size catch ___', error);
     }
+  }
 
-    getText(elem: ElementFinder) {
-        return elem.getText();
+  async resetToDefaultPageNumber() {
+    try {
+      await this.openCurrentPageMenu();
+      await this.menu.clickNthItem(1);
+      await this.menu.waitForMenuToClose();
+    } catch (error) {
+      console.log('____ reset to default page number catch ___', error);
     }
+  }
 
-    resetToDefaultPageSize(): promise.Promise<any> {
-        return this.openMaxItemsMenu()
-            .then(menu => menu.clickMenuItem('25'))
-            .then(() => this.menu.waitForMenuToClose());
-    }
+  async clickNext() {
+    await this.nextButton.click();
+  }
 
-    resetToDefaultPageNumber(): promise.Promise<any> {
-        return this.openCurrentPageMenu()
-            .then(menu => menu.clickMenuItem('1'))
-            .then(() => this.menu.waitForMenuToClose());
-    }
+  async clickPrevious() {
+    await this.previousButton.click();
+  }
 
-    clickNext(): promise.Promise<any> {
-        return this.nextButton.click();
-    }
+  async isNextEnabled() {
+    return this.nextButton.isEnabled();
+  }
 
-    clickPrevious(): promise.Promise<any> {
-        return this.previousButton.click();
-    }
+  async isPreviousEnabled() {
+    return this.previousButton.isEnabled();
+  }
+
+  async isPagesButtonPresent() {
+    return browser.isElementPresent(this.pagesButton);
+  }
+
+  async isRangePresent() {
+    return this.range.isPresent();
+  }
+
+  async isMaxItemsPresent() {
+    return this.maxItems.isPresent();
+  }
+
+  async isCurrentPagePresent() {
+    return this.currentPage.isPresent();
+  }
+
+  async isTotalPagesPresent() {
+    return this.totalPages.isPresent();
+  }
+
+  async isPreviousButtonPresent() {
+    return this.previousButton.isPresent();
+  }
+
+  async isNextButtonPresent() {
+    return this.nextButton.isPresent();
+  }
+
+  async getCurrentPage() {
+    return this.currentPage.getText();
+  }
+
+  async getRange() {
+    return this.range.getText();
+  }
+
+  async getMaxItems() {
+    return this.maxItems.getText();
+  }
+
+  async getTotalPages() {
+    return this.totalPages.getText();
+  }
 }

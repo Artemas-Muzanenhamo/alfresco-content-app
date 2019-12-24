@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -27,6 +27,11 @@ export * from './login/login';
 export * from './header/header';
 export * from './header/user-info';
 export * from './data-table/data-table';
+export * from './dialog/confirm-dialog';
+export * from './dialog/create-edit-folder-dialog';
+export * from './dialog/password-dialog';
 export * from './pagination/pagination';
 export * from './sidenav/sidenav';
 export * from './toolbar/toolbar';
+export * from './breadcrumb/breadcrumb';
+export * from './viewer/viewer';

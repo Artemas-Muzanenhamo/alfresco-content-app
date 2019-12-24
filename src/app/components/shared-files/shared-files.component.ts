@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -24,35 +24,61 @@
  */
 
 import { Component, OnInit } from '@angular/core';
-import { UploadService } from '@alfresco/adf-core';
-
-import { ContentManagementService } from '../../common/services/content-management.service';
-import { NodePermissionService } from '../../common/services/node-permission.service';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { ContentManagementService } from '../../services/content-management.service';
 import { PageComponent } from '../page.component';
 import { Store } from '@ngrx/store';
-import { AppStore } from '../../store/states/app.state';
+import { AppExtensionService } from '../../extensions/extension.service';
+import { debounceTime } from 'rxjs/operators';
+import { UploadService } from '@alfresco/adf-core';
+import { Router } from '@angular/router';
+import { MinimalNodeEntity } from '@alfresco/js-api';
 
 @Component({
-    templateUrl: './shared-files.component.html'
+  templateUrl: './shared-files.component.html'
 })
 export class SharedFilesComponent extends PageComponent implements OnInit {
+  isSmallScreen = false;
 
-    constructor(store: Store<AppStore>,
-                private uploadService: UploadService,
-                private content: ContentManagementService,
-                public permission: NodePermissionService) {
-        super(store);
-    }
+  columns: any[] = [];
 
-    ngOnInit() {
-        super.ngOnInit();
+  constructor(
+    store: Store<any>,
+    extensions: AppExtensionService,
+    content: ContentManagementService,
+    private uploadService: UploadService,
+    private breakpointObserver: BreakpointObserver,
+    private router: Router
+  ) {
+    super(store, extensions, content);
+  }
 
-        this.subscriptions = this.subscriptions.concat([
-            this.content.nodesDeleted.subscribe(() => this.reload()),
-            this.content.nodesMoved.subscribe(() => this.reload()),
-            this.content.nodesRestored.subscribe(() => this.reload()),
-            this.content.linksUnshared.subscribe(() => this.reload()),
-            this.uploadService.fileUploadError.subscribe((error) => this.onFileUploadedError(error))
-        ]);
-    }
+  ngOnInit() {
+    super.ngOnInit();
+
+    this.subscriptions = this.subscriptions.concat([
+      this.content.linksUnshared
+        .pipe(debounceTime(300))
+        .subscribe(() => this.reload()),
+
+      this.uploadService.fileUploadComplete
+        .pipe(debounceTime(300))
+        .subscribe(_ => this.reload()),
+      this.uploadService.fileUploadDeleted
+        .pipe(debounceTime(300))
+        .subscribe(_ => this.reload()),
+
+      this.breakpointObserver
+        .observe([Breakpoints.HandsetPortrait, Breakpoints.HandsetLandscape])
+        .subscribe(result => {
+          this.isSmallScreen = result.matches;
+        })
+    ]);
+
+    this.columns = this.extensions.documentListPresets.shared || [];
+  }
+
+  preview(node: MinimalNodeEntity) {
+    this.showPreview(node, { location: this.router.url });
+  }
 }

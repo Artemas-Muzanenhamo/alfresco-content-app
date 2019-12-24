@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -25,137 +25,158 @@
 
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { RouterModule } from '@angular/router';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { RouterModule, RouteReuseStrategy } from '@angular/router';
+import {
+  BrowserAnimationsModule,
+  NoopAnimationsModule
+} from '@angular/platform-browser/animations';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { TRANSLATION_PROVIDER, CoreModule, AppConfigService, PageTitleService, DebugAppConfigService } from '@alfresco/adf-core';
-import { ContentModule } from '@alfresco/adf-content-services';
+import {
+  TRANSLATION_PROVIDER,
+  CoreModule,
+  AppConfigService,
+  DebugAppConfigService
+} from '@alfresco/adf-core';
+import {
+  LibraryDialogComponent,
+  ContentModule
+} from '@alfresco/adf-content-services';
+import { AppRouteReuseStrategy, SharedModule } from '@alfresco/aca-shared';
 
 import { AppComponent } from './app.component';
 import { APP_ROUTES } from './app.routes';
 
-import { GenericErrorComponent } from './components/generic-error/generic-error.component';
-import { LoginComponent } from './components/login/login.component';
-import { PreviewComponent } from './components/preview/preview.component';
 import { FilesComponent } from './components/files/files.component';
-import { FavoritesComponent } from './components/favorites/favorites.component';
 import { LibrariesComponent } from './components/libraries/libraries.component';
+import { FavoriteLibrariesComponent } from './components/favorite-libraries/favorite-libraries.component';
+import { NodeVersionUploadDialogComponent } from './dialogs/node-version-upload/node-version-upload.dialog';
+import { NodeVersionsDialogComponent } from './dialogs/node-versions/node-versions.dialog';
+
+import { AppStoreModule } from './store/app-store.module';
+import { MaterialModule } from './material.module';
+import { AppExtensionsModule } from './extensions.module';
+import { CoreExtensionsModule } from './extensions/core.extensions.module';
+import { AppInfoDrawerModule } from './components/info-drawer/info.drawer.module';
+import { DirectivesModule } from './directives/directives.module';
+import { ContextMenuModule } from './components/context-menu/context-menu.module';
+import { ExtensionsModule } from '@alfresco/adf-extensions';
+import { AppToolbarModule } from './components/toolbar/toolbar.module';
+import { AppCreateMenuModule } from './components/create-menu/create-menu.module';
+import { AppSidenavModule } from './components/sidenav/sidenav.module';
+import { AppPermissionsModule } from './components/permissions/permissions.module';
+import { AppCommonModule } from './components/common/common.module';
+import { AppLayoutModule } from './components/layout/layout.module';
+import { AppCurrentUserModule } from './components/current-user/current-user.module';
+import { AppSearchInputModule } from './components/search/search-input.module';
+import { DocumentListCustomComponentsModule } from './components/dl-custom-components/document-list-custom-components.module';
+import { AppSearchResultsModule } from './components/search/search-results.module';
+import { AppLoginModule } from './components/login/login.module';
+import { AppHeaderModule } from './components/header/header.module';
+import { AppNodeVersionModule } from './components/node-version/node-version.module';
+import { FavoritesComponent } from './components/favorites/favorites.component';
 import { RecentFilesComponent } from './components/recent-files/recent-files.component';
 import { SharedFilesComponent } from './components/shared-files/shared-files.component';
-import { TrashcanComponent } from './components/trashcan/trashcan.component';
-import { LayoutComponent } from './components/layout/layout.component';
-import { SidenavViewsManagerDirective } from './components/layout/sidenav-views-manager.directive';
-import { HeaderComponent } from './components/header/header.component';
-import { CurrentUserComponent } from './components/current-user/current-user.component';
-import { SearchInputComponent } from './components/search-input/search-input.component';
-import { SearchInputControlComponent } from './components/search-input-control/search-input-control.component';
-import { SidenavComponent } from './components/sidenav/sidenav.component';
-import { AboutComponent } from './components/about/about.component';
-import { LocationLinkComponent } from './components/location-link/location-link.component';
-import { CustomDlRowComponent } from './components/custom-dl-row/custom-dl-row.component';
-import { NodeCopyDirective } from './common/directives/node-copy.directive';
-import { NodeDeleteDirective } from './common/directives/node-delete.directive';
-import { NodeMoveDirective } from './common/directives/node-move.directive';
-import { NodeRestoreDirective } from './common/directives/node-restore.directive';
-import { NodePermanentDeleteDirective } from './common/directives/node-permanent-delete.directive';
-import { NodeUnshareDirective } from './common/directives/node-unshare.directive';
-import { NodeVersionsDirective } from './common/directives/node-versions.directive';
-import { NodeVersionsDialogComponent } from './dialogs/node-versions/node-versions.dialog';
-import { BrowsingFilesService } from './common/services/browsing-files.service';
-import { ContentManagementService } from './common/services/content-management.service';
-import { NodeActionsService } from './common/services/node-actions.service';
-import { NodePermissionService } from './common/services/node-permission.service';
-import { SearchComponent } from './components/search/search.component';
-import { SettingsComponent } from './components/settings/settings.component';
-import { PageTitleService as AcaPageTitleService } from './common/services/page-title.service';
-import { ProfileResolver } from './common/services/profile.resolver';
 
-import { InfoDrawerComponent } from './components/info-drawer/info-drawer.component';
-import { EditFolderDirective } from './directives/edit-folder.directive';
-import { CreateFolderDirective } from './directives/create-folder.directive';
-import { DownloadNodesDirective } from './directives/download-nodes.directive';
-import { AppStoreModule } from './store/app-store.module';
-import { PaginationDirective } from './directives/pagination.directive';
-import { DocumentListDirective } from './directives/document-list.directive';
-import { MaterialModule } from './material.module';
-import { ExperimentalDirective } from './directives/experimental.directive';
-import { ContentApiService } from './services/content-api.service';
+import { environment } from '../environments/environment';
+
+import { registerLocaleData } from '@angular/common';
+import localeFr from '@angular/common/locales/fr';
+import localeDe from '@angular/common/locales/de';
+import localeIt from '@angular/common/locales/it';
+import localeEs from '@angular/common/locales/es';
+import localeJa from '@angular/common/locales/ja';
+import localeNl from '@angular/common/locales/nl';
+import localePt from '@angular/common/locales/pt';
+import localeNb from '@angular/common/locales/nb';
+import localeRu from '@angular/common/locales/ru';
+import localeCh from '@angular/common/locales/zh';
+import localeAr from '@angular/common/locales/ar';
+import localeCs from '@angular/common/locales/cs';
+import localePl from '@angular/common/locales/pl';
+import localeFi from '@angular/common/locales/fi';
+import localeDa from '@angular/common/locales/da';
+import localeSv from '@angular/common/locales/sv';
+
+registerLocaleData(localeFr);
+registerLocaleData(localeDe);
+registerLocaleData(localeIt);
+registerLocaleData(localeEs);
+registerLocaleData(localeJa);
+registerLocaleData(localeNl);
+registerLocaleData(localePt);
+registerLocaleData(localeNb);
+registerLocaleData(localeRu);
+registerLocaleData(localeCh);
+registerLocaleData(localeAr);
+registerLocaleData(localeCs);
+registerLocaleData(localePl);
+registerLocaleData(localeFi);
+registerLocaleData(localeDa);
+registerLocaleData(localeSv);
 
 @NgModule({
-    imports: [
-        BrowserModule,
-        BrowserAnimationsModule,
-        FormsModule,
-        ReactiveFormsModule,
-        RouterModule.forRoot(APP_ROUTES, {
-            useHash: true,
-            enableTracing: false // enable for debug only
-        }),
-        MaterialModule,
-        CoreModule,
-        ContentModule,
-        AppStoreModule
-    ],
-    declarations: [
-        AppComponent,
-        GenericErrorComponent,
-        LoginComponent,
-        LayoutComponent,
-        SidenavViewsManagerDirective,
-        HeaderComponent,
-        CurrentUserComponent,
-        SearchInputComponent,
-        SearchInputControlComponent,
-        SidenavComponent,
-        FilesComponent,
-        FavoritesComponent,
-        LibrariesComponent,
-        RecentFilesComponent,
-        SharedFilesComponent,
-        TrashcanComponent,
-        PreviewComponent,
-        AboutComponent,
-        LocationLinkComponent,
-        CustomDlRowComponent,
-        NodeCopyDirective,
-        NodeDeleteDirective,
-        NodeMoveDirective,
-        NodeRestoreDirective,
-        NodePermanentDeleteDirective,
-        NodeUnshareDirective,
-        NodeVersionsDirective,
-        NodeVersionsDialogComponent,
-        SearchComponent,
-        SettingsComponent,
-        InfoDrawerComponent,
-        EditFolderDirective,
-        CreateFolderDirective,
-        DownloadNodesDirective,
-        PaginationDirective,
-        DocumentListDirective,
-        ExperimentalDirective
-    ],
-    providers: [
-        { provide: PageTitleService, useClass: AcaPageTitleService },
-        { provide: AppConfigService, useClass: DebugAppConfigService },
-        {
-            provide: TRANSLATION_PROVIDER,
-            multi: true,
-            useValue: {
-                name: 'app',
-                source: 'assets'
-            }
-        },
-        BrowsingFilesService,
-        ContentManagementService,
-        NodeActionsService,
-        NodePermissionService,
-        ProfileResolver,
-        ContentApiService
-    ],
-    entryComponents: [
-        NodeVersionsDialogComponent
-    ],
-    bootstrap: [AppComponent]
+  imports: [
+    BrowserModule,
+    environment.e2e ? NoopAnimationsModule : BrowserAnimationsModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterModule.forRoot(APP_ROUTES, {
+      useHash: true,
+      enableTracing: false // enable for debug only
+    }),
+    MaterialModule,
+    CoreModule.forRoot(),
+    ContentModule.forRoot(),
+    SharedModule.forRoot(),
+    AppStoreModule,
+    CoreExtensionsModule.forRoot(),
+    ExtensionsModule,
+    AppExtensionsModule,
+    AppLoginModule,
+    AppCommonModule,
+    AppLayoutModule,
+    AppCurrentUserModule,
+    DirectivesModule,
+    ContextMenuModule,
+    AppInfoDrawerModule,
+    AppToolbarModule,
+    AppSidenavModule,
+    AppCreateMenuModule,
+    DocumentListCustomComponentsModule,
+    AppPermissionsModule,
+    AppSearchInputModule,
+    AppSearchResultsModule,
+    AppHeaderModule,
+    AppNodeVersionModule
+  ],
+  declarations: [
+    AppComponent,
+    FilesComponent,
+    LibrariesComponent,
+    FavoriteLibrariesComponent,
+    NodeVersionUploadDialogComponent,
+    NodeVersionsDialogComponent,
+    FavoritesComponent,
+    RecentFilesComponent,
+    SharedFilesComponent
+  ],
+  providers: [
+    { provide: RouteReuseStrategy, useClass: AppRouteReuseStrategy },
+    { provide: AppConfigService, useClass: DebugAppConfigService },
+    {
+      provide: TRANSLATION_PROVIDER,
+      multi: true,
+      useValue: {
+        name: 'app',
+        source: 'assets'
+      }
+    }
+  ],
+  entryComponents: [
+    NodeVersionsDialogComponent,
+    NodeVersionUploadDialogComponent,
+    LibraryDialogComponent
+  ],
+  bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {}

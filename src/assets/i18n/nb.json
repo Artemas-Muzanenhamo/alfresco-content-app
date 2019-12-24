@@ -1,12 +1,47 @@
 {
   "APP": {
+    "COPYRIGHT": "© 2017 - 2019 Alfresco Software, Inc. Med enerett.",
+    "ABOUT": {
+      "VERSION": "Versjon:",
+      "PLUGINS": {
+        "TITLE": "Tillegg",
+        "ID": "ID",
+        "NAME": "Navn",
+        "VERSION": "Versjon",
+        "VENDOR": "Leverandør",
+        "LICENSE": "Lisens",
+        "RUNTIME": "Kjøretid",
+        "DESCRIPTION": "Beskrivelse"
+      },
+      "LICENSE": {
+        "TITLE": "Lisens",
+        "PROPERTY": "Egenskap",
+        "VALUE": "Verdi"
+      },
+      "STATUS": {
+        "TITLE": "Status",
+        "PROPERTY": "Egenskap",
+        "VALUE": "Verdi"
+      },
+      "MODULES": {
+        "TITLE": "Alfresco plattformmoduler",
+        "ID": "ID",
+        "NAME": "Navn",
+        "VERSION": "Versjon"
+      },
+      "PACKAGES": {
+        "TITLE": "Pakker",
+        "NAME": "Navn",
+        "VERSION": "Versjon"
+      }
+    },
     "LANGUAGE": "Språk",
     "SIGN_IN": "Logg på",
     "SIGN_OUT": "Logg ut",
     "SETTINGS": {
+      "TITLE": "Innstillinger",
       "APPLICATION-SETTINGS": "Programinnstillinger",
       "REPOSITORY-SETTINGS": "Databaseinnstillinger",
-      "EXPERIMENTAL-FEATURES": "Eksperimentelle funksjoner",
       "INVALID-VALUE-FORMAT": "Ugyldig verdiformat",
       "REQUIRED-FIELD": "Dette feltet er obligatorisk",
       "RESET": "Tilbakestill",
@@ -17,19 +52,21 @@
     },
     "NEW_MENU": {
       "LABEL": "Ny",
-      "TOOLTIP": "Legg til nye filer eller mapper",
+      "TOOLTIP": "Legg til nye filer og mapper, eller opprett et nytt filbibliotek",
       "MENU_ITEMS": {
         "CREATE_FOLDER": "Opprett mappe",
         "UPLOAD_FILE": "Last opp fil",
-        "UPLOAD_FOLDER": "Last opp mappe"
+        "UPLOAD_FOLDER": "Last opp mappe",
+        "CREATE_LIBRARY": "Opprett bibliotek"
       },
       "TOOLTIPS": {
         "CREATE_FOLDER": "Opprett ny mappe",
-        "CREATE_FOLDER_NOT_ALLOWED": "Du kan ikke opprette ny mappe her. Du har kanskje ikke de nødvendige tillatelsene. Kontakt IT-teamet.",
+        "CREATE_FOLDER_NOT_ALLOWED": "Mapper kan ikke opprettes mens du viser de gjeldende elementene",
         "UPLOAD_FILES": "Velg filene som skal lastes opp",
-        "UPLOAD_FILES_NOT_ALLOWED": "Du må ha tillatelse for å laste opp her. Kontakt IT-teamet.",
+        "UPLOAD_FILES_NOT_ALLOWED": "Filer kan ikke lastes opp mens du viser de gjeldende elementene",
         "UPLOAD_FOLDERS": "Velg mappene som skal lastes opp",
-        "UPLOAD_FOLDERS_NOT_ALLOWED": "Du må ha tillatelse for å laste opp her. Kontakt IT-teamet."
+        "UPLOAD_FOLDERS_NOT_ALLOWED": "Mapper kan ikke lastes opp mens du viser de gjeldende elementene",
+        "CREATE_LIBRARY": "Opprett et nytt filbibliotek"
       }
     },
     "BROWSE": {
@@ -42,13 +79,36 @@
       },
       "LIBRARIES": {
         "TITLE": "Filbiblioteker",
+        "DESCRIPTION": "Gå til filbiblioteker",
         "SIDENAV_LINK": {
           "LABEL": "Filbiblioteker",
-          "TOOLTIP": "Gå til filbiblioteker"
+          "TOOLTIP": "Filbiblioteker"
         },
         "EMPTY_STATE": {
-          "TITLE": "Du er ikke medlem av noen filbiblioteker ennå",
-          "TEXT": "Bli med i områder for å laste opp, vise og dele filer."
+          "FILE_LIBRARIES": {
+            "TITLE": "Du er ikke medlem av noen filbiblioteker ennå",
+            "TEXT": "Slutt deg til biblioteker for å laste opp, vise og dele filer."
+          },
+          "FAVORITE_LIBRARIES": {
+            "TITLE": "Ingen favorittbiblioteker",
+            "TEXT": "Legg et bibliotek til som favoritt, slik at du lett kan finne det senere."
+          }
+        },
+        "MENU": {
+          "MY_LIBRARIES": {
+            "TITLE": "Mine biblioteker",
+            "SIDENAV_LINK": {
+              "LABEL": "Mine biblioteker",
+              "TOOLTIP": "Gå inn i mine biblioteker"
+            }
+          },
+          "FAVORITE_LIBRARIES": {
+            "TITLE": "Favorittbiblioteker",
+            "SIDENAV_LINK": {
+              "LABEL": "Favorittbiblioteker",
+              "TOOLTIP": "Gå inn i mine favorittbiblioteker"
+            }
+          }
         }
       },
       "SHARED": {
@@ -102,11 +162,25 @@
       "SEARCH": {
         "TITLE": "Søkeresultater",
         "FOUND_RESULTS": "{{ number }} resultater funnet",
+        "FOUND_ONE_RESULT": "{{ number }} resultat funnet",
         "CUSTOM_ROW": {
           "MODIFIED": "Endret",
+          "BY_USER": "av {{ user }}",
           "LOCATION": "Sted",
           "SIZE": "Størrelse"
+        },
+        "UNKNOWN_LOCATION": "Ukjent",
+        "NO_RESULTS": "Søket ditt ga 0 resultater",
+        "TOGGLE_SEARCH_FILTER": "Aktiver/deaktiver søkefilter",
+        "ERRORS": {
+          "500": "Det oppstod en feil med behandling av søkespørringen [500]",
+          "GENERIC": "Det oppstod en feil med behandling av søkespørringen"
         }
+      },
+      "SEARCH_LIBRARIES": {
+        "TITLE": "Biblioteker funnet...",
+        "FOUND_RESULTS": "{{ number }} resultater",
+        "FOUND_ONE_RESULT": "{{ number }} resultat"
       }
     },
     "ACTIONS": {
@@ -119,12 +193,27 @@
       "DELETE_PERMANENT": "Slett permanent",
       "MORE": "Flere handlinger",
       "UNDO": "Angre",
+      "PERMISSIONS": "Tillatelser",
       "RESTORE": "Gjenopprett",
       "FAVORITE": "Favoritt",
+      "ADD_FAVORITE": "Legg til favoritt",
+      "REMOVE_FAVORITE": "Fjern favoritt",
       "UNSHARE": "Opphev deling",
       "DETAILS": "Visningsdetaljer",
       "VERSIONS": "Administrer versjoner",
-      "TOGGLE-SIDENAV": "Aktiver/deaktiver sidenavigasjonsfelt"
+      "UPLOAD_VERSION": "Last opp ny versjon",
+      "TOGGLE-SIDENAV": "Aktiver/deaktiver sidenavigasjonsfelt",
+      "SHARE": "Del",
+      "SHARE_EDIT": "Innstillinger for delt kobling",
+      "PRINT": "Skriv ut",
+      "FULLSCREEN": "Aktiver fullskjermmodus",
+      "JOIN": "Bli med",
+      "CANCEL_JOIN": "Avbryt forespørsel om tilslutning",
+      "LEAVE": "Forlat bibliotek",
+      "EDIT_OFFLINE": "Rediger frakoblet",
+      "EDIT_OFFLINE_CANCEL": "Avbryt redigering",
+      "LIST_MODE": "Vis liste",
+      "GALLERY_MODE": "Vis galleri"
     },
     "DIALOGS": {
       "CONFIRM_PURGE": {
@@ -132,30 +221,38 @@
         "MESSAGE": "Dette vil slette valgte elementer for godt.",
         "YES_LABEL": "Slett",
         "NO_LABEL": "Behold"
+      },
+      "CONFIRM_LEAVE": {
+        "TITLE": "Vil du forlate dette biblioteket?",
+        "MESSAGE": "Hvis du går ut, mister du tilgangen.",
+        "YES_LABEL": "OK",
+        "NO_LABEL": "Avbryt"
       }
     },
     "DOCUMENT_LIST": {
       "COLUMNS": {
+        "ID": "ID",
         "NAME": "Navn",
         "SIZE": "Størrelse",
         "MODIFIED_ON": "Endret",
         "MODIFIED_BY": "Endret av",
-        "STATUS": "Status",
+        "VISIBILITY": "Synlighet",
         "TITLE": "Tittel",
         "LOCATION": "Sted",
         "SHARED_BY": "Delt av",
         "DELETED_ON": "Slettet",
-        "DELETED_BY": "Slettet av"
+        "DELETED_BY": "Slettet av",
+        "ROLE": "Min rolle"
+      },
+      "TOOLBAR": {
+        "CARDVIEW": "Kortvisningsmodus",
+        "LISTVIEW": "Listevisningsmodus"
       }
-    },
-    "SITES_VISIBILITY": {
-      "PUBLIC": "Offentlig",
-      "MODERATED": "Moderert",
-      "PRIVATE": "Privat"
     },
     "MESSAGES": {
       "ERRORS": {
-        "MISSING_CONTENT": "Denne filen eller mappen finnes ikke lenger, eller du har ikke tillatelse til å se den.",
+        "CANNOT_NAVIGATE_LOCATION": "Kan ikke åpne dette stedet",
+        "MISSING_CONTENT": "Dette elementet finnes ikke lenger, eller du har ikke tillatelse til å se det.",
         "GENERIC": "Handlingen var mislykket. Prøv på nytt, eller kontakt IT-teamet.",
         "CONFLICT": "Dette navnet er allerede i bruk, prøv et annet navn.",
         "NODE_MOVE": "Mislykket flytting, det finnes allerede en fil med samme navn.",
@@ -165,6 +262,8 @@
         "NODE_RESTORE": "{{ name }} kan ikke gjenopprettes",
         "NODE_RESTORE_PLURAL": "{{ number }} elementer kan ikke gjenopprettes",
         "PERMISSION": "Du har ikke tilgang til å gjøre dette",
+        "LOCK_NODE": "Det oppstod et problem med å låse {{ fileName }}-filen",
+        "UNLOCK_NODE": "Det oppstod et problem med å låse opp {{ fileName }}-filen",
         "TRASH": {
           "NODES_PURGE": {
             "PLURAL": "{{ number }} elementer kan ikke slettes",
@@ -177,13 +276,21 @@
             "GENERIC": "Problem med å gjenopprette {{ name }}"
           }
         },
-        "DELETE_LIBRARY_FAILED": "Kan ikke slette biblioteket"
+        "DELETE_LIBRARY_FAILED": "Kan ikke slette biblioteket",
+        "JOIN_REQUEST_FAILED": "Kan ikke slutte deg til biblioteket",
+        "JOIN_CANCEL_FAILED": "Kan ikke avbryte forespørselen din om tilslutning",
+        "LEAVE_LIBRARY_FAILED": "Kan ikke forlate dette biblioteket",
+        "INVALID_SENDER_EMAIL": "E-postadressen din må være gyldig før du ber om tilslutning.",
+        "INVALID_RECEIVER_EMAIL": "Mottakeres e-postadresse er ikke gyldig – kontakt IT."
       },
       "UPLOAD": {
         "ERROR": {
-          "GENERIC": "Det oppstod et problem",
+          "GENERIC": "Opplasting mislyktes. Kontakt IT om dette problemet vedvarer",
           "CONFLICT": "Ny versjon er ikke lastet opp, en annen fil med samme navn finnes alt",
-          "500": "Det oppstod et problem under opplasting"
+          "500": "Intern serverfeil. Prøv på nytt eller kontakt IT-støtten [500]",
+          "504": "Serveren ble tidsavbrutt. Prøv på nytt eller kontakt IT-støtten [504]",
+          "403": "Ikke tilstrekkelige tillatelser til å laste opp på dette stedet [403]",
+          "404": "Opplastingsstedet finnes ikke lenger [404]"
         }
       },
       "INFO": {
@@ -222,17 +329,24 @@
             "FAIL": "{{ failed }} kunne ikke flyttes."
           }
         },
-        "LIBRARY_DELETED": "Bibliotek slettet"
+        "LIBRARY_DELETED": "Bibliotek slettet",
+        "JOINED": "Bibliotek tilsluttet",
+        "JOIN_REQUESTED": "Forespørsel sendt om tilslutning til dette biblioteket",
+        "JOIN_CANCELED": "Forespørselen om tilslutning til biblioteket er avbrutt",
+        "LEFT_LIBRARY": "Du har forlatt biblioteket"
       }
     },
     "CONTENT_METADATA": {
-      "EXIF_GROUP_TITLE": "Bilde-EXIF"
+      "EXIF_GROUP_TITLE": "Bilde-EXIF",
+      "EFFECTIVITY_GROUP_TITLE": "Effektivitet"
     },
     "INFO_DRAWER": {
       "TITLE": "Detaljer",
       "TABS": {
         "PROPERTIES": "Egenskaper",
-        "VERSIONS": "Versjoner"
+        "LIBRARY_PROPERTIES": "Om",
+        "VERSIONS": "Versjoner",
+        "COMMENTS": "Kommentarer"
       }
     }
   },
@@ -243,17 +357,91 @@
     "MOVE_ITEMS": "Flytt {{ number }} elementer til...",
     "SEARCH": "Søk"
   },
-  "VERSION": {
+  "PERMISSIONS": {
     "DIALOG": {
+      "TITLE": "Administrer tillatelser",
+      "CLOSE": "Lukk",
+      "INHERIT_PERMISSIONS_BUTTON": "Arv tillatelser",
+      "INHERITED_PERMISSIONS_BUTTON": "Tillatelser arvet",
+      "ADD_USER_OR_GROUP": "Legg til bruker eller gruppe"
+    }
+  },
+  "SHARED_LINK": {
+    "UNSHARE_PERMISSION_ERROR": "Du har ikke tillatelse til å oppheve deling av denne filen"
+  },
+  "VERSION": {
+    "DIALOG_ADF": {
       "TITLE": "Administrer versjoner",
       "CLOSE": "Lukk"
+    },
+    "DIALOG": {
+      "TITLE": "Last opp ny versjon",
+      "CANCEL": "Avbryt",
+      "UPLOAD": "Laster opp"
+    },
+    "FORM": {
+      "SUBTITLE": "Hvor omfattende endringer ble gjort i denne versjonen?",
+      "VERSION": {
+        "MINOR": "Små (#.1)",
+        "MAJOR": "Store (2.0)"
+      },
+      "COMMENT": {
+        "PLACEHOLDER": "Legg til merknader som beskriver hva som er endret"
+      }
     },
     "SELECTION": {
       "EMPTY": "Velg et dokument for å se versjonene av det.",
       "NO_PERMISSION": "Du har ikke tillatelse til å administrere versjonene av dette innholdet."
+    },
+    "ERROR": {
+      "GENERIC": "Det oppstod en feil med versjonskontroll av filen"
+    }
+  },
+  "LIBRARY": {
+    "DIALOG": {
+      "CREATE_TITLE": "Opprett bibliotek",
+      "CREATE": "Opprett",
+      "UPDATE": "Oppdater",
+      "EDIT": "Rediger",
+      "CANCEL": "Avbryt",
+      "FORM": {
+        "DESCRIPTION": "Beskrivelse",
+        "SITE_ID": "Biblioteks-ID",
+        "NAME": "Navn",
+        "VISIBILITY": "Synlighet"
+      }
+    },
+    "VISIBILITY": {
+      "PRIVATE": "Privat",
+      "PUBLIC": "Offentlig",
+      "MODERATED": "Moderert"
+    },
+    "HINTS": {
+      "SITE_TITLE_EXISTS": "Biblioteknavn er allerede i bruk"
+    },
+    "ERRORS": {
+      "GENERIC": "Vi støtte på et problem",
+      "EXISTENT_SITE": "Denne biblioteks-ID-en er ikke tilgjengelig. Prøv en annen biblioteks-ID.",
+      "CONFLICT": "Denne biblioteks-ID-en er alt brukt. Sjekk papirkurven.",
+      "ID_TOO_LONG": "Bruk 72 tegn eller mindre i URL-navnet",
+      "DESCRIPTION_TOO_LONG": "Bruk 512 tegn eller mindre i beskrivelsen",
+      "TITLE_TOO_LONG": "Bruk 256 tegn eller mindre i tittelen",
+      "ILLEGAL_CHARACTERS": "Bruk kun tall og bokstaver",
+      "ONLY_SPACES": "Biblioteknavn kan ikke inneholde bare mellomrom",
+      "LIBRARY_UPDATE_ERROR": "Det oppstod en feil under oppdatering av bibliotekegenskaper"
+    },
+    "SUCCESS": {
+      "LIBRARY_UPDATED": "Bibliotekegenskaper oppdatert"
     }
   },
   "SEARCH": {
+    "INPUT": {
+      "PLACEHOLDER": "Søk",
+      "FILES": "Filer",
+      "FOLDERS": "Mapper",
+      "LIBRARIES": "Biblioteker",
+      "HINT": "Inndata for søk må ha minst 2 alfanumeriske tegn."
+    },
     "SORT": {
       "RELEVANCE": "Relevans",
       "FILENAME": "Filnavn",
@@ -268,12 +456,30 @@
       "FILE_TYPE": "Filtype",
       "CREATOR": "Oppretter",
       "MODIFIER": "Modifikator",
-      "FILE_LIBRARY": "Filbibliotek"
+      "LOCATION": "Sted"
     },
     "CATEGORIES": {
       "MODIFIED_DATE": "Endringsdato",
       "SIZE": "Størrelse",
+      "SIZE_OPTIONS": {
+        "SMALL": "Liten",
+        "MEDIUM": "Middels",
+        "LARGE": "Stor",
+        "HUGE": "Enorm"
+      },
       "CREATED_DATE": "Opprettelsesdato"
+    },
+    "FACET_QUERIES": {
+      "TODAY": "I dag",
+      "THIS_WEEK": "Denne uken",
+      "THIS_MONTH": "Denne måned",
+      "LAST_6_MONTHS": "i de siste 6 månedene",
+      "THIS_YEAR": "Dette året"
+    }
+  },
+  "AVATAR": {
+    "ACCESSIBILITY": {
+      "AVATAR_BUTTON_ARIA_LABEL": "Brukeralternativer"
     }
   },
   "CORE": {
@@ -289,11 +495,28 @@
       "INFO": "Visningsdetaljer"
     }
   },
+  "FILE_UPLOAD": {
+    "ERRORS": {
+      "409": "Dette navnet er allerede i bruk – prøv et annet navn [409]"
+    }
+  },
   "ADF_VERSION_LIST": {
     "ACTIONS": {
       "UPLOAD": {
         "TOOLTIP": "Last opp ny versjon"
       }
+    }
+  },
+  "CUSTOM_NAME_COLUMN": {
+    "ACCESSIBILITY": {
+      "FILE_LINK_ARIA_LABEL": "Vis {{ name }}",
+      "FOLDER_LINK_ARIA_LABEL": "Åpne {{ name }}-mappe"
+    }
+  },
+  "ADF-DATATABLE": {
+    "FILE_TYPE": {
+      "BOOKS-24PX": "Filbibliotek",
+      "BASELINE-LOCK-24PX": "låst fil"
     }
   }
 }

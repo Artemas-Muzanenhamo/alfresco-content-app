@@ -2,7 +2,7 @@
  * @license
  * Alfresco Example Content Application
  *
- * Copyright (C) 2005 - 2018 Alfresco Software Limited
+ * Copyright (C) 2005 - 2019 Alfresco Software Limited
  *
  * This file is part of the Alfresco Example Content Application.
  * If the software was purchased under a paid Alfresco license, the terms of
@@ -23,33 +23,46 @@
  * along with Alfresco. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { AppStore, getUserProfile } from '@alfresco/aca-shared/store';
+import { ProfileState } from '@alfresco/adf-extensions';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { Component, OnInit } from '@angular/core';
-import { ContentManagementService } from '../../common/services/content-management.service';
-import { PageComponent } from '../page.component';
 import { Store } from '@ngrx/store';
-import { selectUser } from '../../store/selectors/app.selectors';
-import { AppStore } from '../../store/states/app.state';
-import { ProfileState } from '../../store/states/profile.state';
+import { Observable } from 'rxjs';
+import { AppExtensionService } from '../../extensions/extension.service';
+import { ContentManagementService } from '../../services/content-management.service';
+import { PageComponent } from '../page.component';
 
 @Component({
-    templateUrl: './trashcan.component.html'
+  templateUrl: './trashcan.component.html'
 })
 export class TrashcanComponent extends PageComponent implements OnInit {
-    user: ProfileState;
+  isSmallScreen = false;
+  user$: Observable<ProfileState>;
 
-    constructor(private contentManagementService: ContentManagementService,
-                store: Store<AppStore>) {
-        super(store);
-    }
+  columns: any[] = [];
 
-    ngOnInit() {
-        super.ngOnInit();
+  constructor(
+    content: ContentManagementService,
+    extensions: AppExtensionService,
+    store: Store<AppStore>,
+    private breakpointObserver: BreakpointObserver
+  ) {
+    super(store, extensions, content);
+    this.user$ = this.store.select(getUserProfile);
+  }
 
-        this.subscriptions.push(
-            this.contentManagementService.nodesRestored.subscribe(() => this.reload()),
-            this.contentManagementService.nodesPurged.subscribe(() => this.reload()),
-            this.contentManagementService.nodesRestored.subscribe(() => this.reload()),
-            this.store.select(selectUser).subscribe((user) => this.user = user)
-        );
-    }
- }
+  ngOnInit() {
+    super.ngOnInit();
+
+    this.subscriptions.push(
+      this.breakpointObserver
+        .observe([Breakpoints.HandsetPortrait, Breakpoints.HandsetLandscape])
+        .subscribe(result => {
+          this.isSmallScreen = result.matches;
+        })
+    );
+
+    this.columns = this.extensions.documentListPresets.trashcan || [];
+  }
+}
